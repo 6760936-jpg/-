@@ -40,6 +40,7 @@ model Product {
   orderItems    OrderItem[]
   movements     InventoryMovement[]
   spoilages     Spoilage[]
+  driverInventories DriverInventory[]
 
   @@index([categoryId])
   @@index([createdAt])
@@ -66,6 +67,7 @@ model User {
   assignedComplaints Complaint[]         @relation("ComplaintResponsible")
   movements         InventoryMovement[]
   spoilages         Spoilage[]
+  vehicles          Vehicle[]
 }
 
 model Session {
@@ -371,33 +373,21 @@ model Vehicle {
   id        Int      @id @default(autoincrement())
   name      String
   driverId  Int?
-
   createdAt DateTime @default(now())
-
-  driver User? @relation(fields:[driverId], references:[id], onDelete:SetNull)
-
+  driver    User?    @relation(fields: [driverId], references: [id], onDelete: SetNull)
   inventory DriverInventory[]
 
   @@index([driverId])
 }
 
-
 model DriverInventory {
-
-  id Int @id @default(autoincrement())
-
+  id        Int     @id @default(autoincrement())
   vehicleId Int
   productId Int
-
-  quantity Int @default(0)
-
-  vehicle Vehicle @relation(fields:[vehicleId], references:[id], onDelete:Cascade)
-
-  product Product @relation(fields:[productId], references:[id], onDelete:Cascade)
-
+  quantity  Int     @default(0)
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([vehicleId, productId])
-
   @@index([productId])
 }
-
