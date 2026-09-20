@@ -1,0 +1,7 @@
+import { prisma } from "@/lib/prisma";
+import { updateSettingsAction } from "@/lib/admin-actions";
+export const dynamic = "force-dynamic";
+export default async function SettingsPage() {
+  const s = await prisma.siteSettings.findUnique({ where: { id: 1 } });
+  return <div className="p-4 sm:p-6 lg:p-10"><div><p className="eyebrow">Оформление</p><h1 className="mt-2 text-3xl font-semibold">Настройки сайта</h1><p className="mt-2 text-zinc-500">Название, контакты и основной текст можно менять без редактирования кода.</p></div><form action={updateSettingsAction} className="surface-card mt-8 max-w-2xl space-y-5 p-6"><label><span className="field-label">Название бренда</span><input className="input" name="brandName" defaultValue={s?.brandName ?? "ПЕРСПЕКТИВА"} required /></label><label><span className="field-label">Слоган</span><input className="input" name="tagline" defaultValue={s?.tagline ?? ""} /></label><div className="grid gap-5 sm:grid-cols-2"><label><span className="field-label">Телефон</span><input className="input" name="phone" defaultValue={s?.phone ?? ""} /></label><label><span className="field-label">E-mail</span><input className="input" name="email" type="email" defaultValue={s?.email ?? ""} /></label></div><label><span className="field-label">Город</span><input className="input" name="city" defaultValue={s?.city ?? ""} /></label><button className="button-primary">Сохранить настройки</button></form></div>;
+}

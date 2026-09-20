@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  products    Product[]
+}
+
+model Product {
+  id            Int                 @id @default(autoincrement())
+  name          String
+  article       String              @unique
+  price         Float
+  oldPrice      Float?
+  purchasePrice Float               @default(0)
+  stock         Int                 @default(0)
+  minOrder      Int                 @default(1)
+  image         String?
+  description   String?
+  categoryId    Int
+  isNew         Boolean             @default(false)
+  isHit         Boolean             @default(false)
+  isSuperPrice  Boolean             @default(false)
+  active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  category      Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems    OrderItem[]
+  movements     InventoryMovement[]
+  spoilages     Spoilage[]
+
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([isNew, isHit, isSuperPrice])
+}
+
+model User {
+  id                Int                 @id @default(autoincrement())
+  name              String
+  phone             String              @unique
+  shopName          String              @default("")
+  passwordHash      String?
+  role              String              @default("CUSTOMER")
+  active            Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  orders            Order[]
+  sessions          Session[]
+  passwordResets    PasswordReset[]
+  storeMemberships  StoreMembership[]
+  createdStores     Store[]             @relation("StoreCreatedBy")
+  assignedRoutes    DeliveryRoute[]      @relation("RouteAssignee")
+  financeEntries    FinanceEntry[]       @relation("FinanceCreatedBy")
+  createdComplaints Complaint[]          @relation("ComplaintCreatedBy")
+  assignedComplaints Complaint[]         @relation("ComplaintResponsible")
+  movements         InventoryMovement[]
+  spoilages         Spoilage[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordReset {
+  id             String    @id @default(cuid())
+  phone          String    @unique
+  userId         Int?
+  codeHash       String
+  resetTokenHash String?   @unique
+  expiresAt      DateTime
+  verifiedAt     DateTime?
+  usedAt         DateTime?
+  attempts       Int       @default(0)
+  lastSentAt     DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Store {
+  id            Int               @id @default(autoincrement())
+  name          String
+  phone         String?
+  address       String
+  latitude      Float?
+  longitude     Float?
+  exteriorImage String?
+  contactName   String?
+  openingHours  String?
+  notes         String?
+  status        String            @default("LEAD")
+  source        String            @default("FIELD")
+  needsReview   Boolean           @default(false)
+  createdById   Int?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  createdBy     User?             @relation("StoreCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  memberships   StoreMembership[]
+  shelves       Shelf[]
+  orders        Order[]
+  routeStops    RouteStop[]
+  complaints    Complaint[]
+  debt          Float             @default(0)
+  routeLineId   Int?
+  routeOrder    Int               @default(0)
+  routeLine     RouteLine?        @relation(fields: [routeLineId], references: [id], onDelete: SetNull)
+  financeEntries FinanceEntry[]
+
+  @@index([status])
+  @@index([source])
+  @@index([address])
+  @@index([routeLineId])
+}
+
+model StoreMembership {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  storeId   Int
+  role      String   @default("OWNER")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@index([storeId])
+}
+
+model Shelf {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  storeId     Int?
+  status      String    @default("IN_STOCK")
+  photo       String?
+  installedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  store       Store?    @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([status])
+}
+
+model Order {
+  id            Int          @id @default(autoincrement())
+  userId        Int
+  storeId       Int?
+  status        String       @default("NEW")
+  paymentStatus String       @default("UNPAID")
+  debtPosted    Boolean      @default(false)
+  debtAmount    Float        @default(0)
+  comment       String?
+  total         Float        @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  store         Store?       @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  items         OrderItem[]
+  routeStop     RouteStop?
+  financeEntries FinanceEntry[]
+  complaints    Complaint[]
+
+  @@index([userId])
+  @@index([storeId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model OrderItem {
+  id            Int      @id @default(autoincrement())
+  orderId       Int
+  productId     Int?
+  productName   String
+  article       String
+  price         Float
+  purchasePrice Float    @default(0)
+  quantity      Int
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model RouteLine {
+  id          Int             @id @default(autoincrement())
+  title       String          @unique
+  areaSummary String?
+  notes       String?
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  stores      Store[]
+  routes      DeliveryRoute[]
+}
+
+model DeliveryRoute {
+  id             Int         @id @default(autoincrement())
+  title          String
+  routeDate      DateTime
+  lineId         Int?
+  status         String      @default("PLANNED")
+  assignedUserId Int?
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  assignedUser   User?       @relation("RouteAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  line           RouteLine?   @relation(fields: [lineId], references: [id], onDelete: SetNull)
+  stops          RouteStop[]
+
+  @@index([routeDate])
+  @@index([assignedUserId])
+  @@index([lineId])
+}
+
+model RouteStop {
+  id        Int           @id @default(autoincrement())
+  routeId   Int
+  storeId   Int
+  orderId   Int?          @unique
+  sequence  Int
+  status    String        @default("PLANNED")
+  note      String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  route     DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  store     Store         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  order     Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([routeId, sequence])
+  @@index([storeId])
+}
+
+model Promotion {
+  id          Int      @id @default(autoincrement())
+  title       String
+  subtitle    String?
+  badge       String?
+  image       String?
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model FinanceCategory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, type])
+  @@index([type, active])
+}
+
+model FinanceEntry {
+  id            Int      @id @default(autoincrement())
+  type          String
+  category      String
+  amount        Float
+  note          String?
+  entryDate     DateTime @default(now())
+  orderId       Int?
+  storeId       Int?
+  paymentMethod String?
+  isReversal    Boolean  @default(false)
+  reversalOfId  Int?
+  createdById   Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  store         Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  createdBy     User?    @relation("FinanceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([entryDate])
+  @@index([storeId])
+  @@index([reversalOfId])
+}
+
+model InventoryMovement {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  userId      Int?
+  type        String
+  quantity    Int
+  note        String?
+  createdAt   DateTime @default(now())
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model Spoilage {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  userId      Int?
+  quantity    Int
+  amount      Float
+  reason      String
+  photo       String?
+  createdAt   DateTime @default(now())
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model Complaint {
+  id            Int      @id @default(autoincrement())
+  storeId       Int
+  orderId       Int?
+  title         String
+  description   String
+  status        String   @default("NEW")
+  resolution    String?
+  createdById   Int?
+  responsibleId Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdBy     User?    @relation("ComplaintCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  responsible   User?    @relation("ComplaintResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([storeId])
+}
+
+model SiteSettings {
+  id          Int      @id @default(1)
+  brandName   String   @default("ПЕРСПЕКТИВА")
+  tagline     String   @default("Оптовые решения для розницы")
+  phone       String   @default("+7 900 000-00-00")
+  email       String   @default("hello@example.ru")
+  city        String   @default("Ваш город")
+  accent      String   @default("#111827")
+  updatedAt   DateTime @updatedAt
+}

@@ -1,0 +1,22 @@
+import Link from "next/link";
+import { LogoutButton } from "@/components/LogoutButton";
+import { ProfileSettingsForm } from "@/components/ProfileSettingsForm";
+import { formatCurrency, formatDateTime } from "@/lib/format";
+import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/order-status";
+import { requireUser } from "@/lib/auth";
+import { formatPhone } from "@/lib/phone";
+import { prisma } from "@/lib/prisma";
+
+export const metadata = { title: "Личный кабинет" }; export const dynamic = "force-dynamic";
+const roleLabel: Record<string,string> = { DIRECTOR:"Генеральный директор", ADMIN:"Администратор", FIELD:"Выездной сотрудник", DRIVER:"Водитель", CUSTOMER:"Покупатель", MANAGER:"Менеджер", WAREHOUSE:"Кладовщик" };
+
+export default async function ProfilePage() {
+  const user = await requireUser("/profile");
+  const membership = await prisma.storeMembership.findFirst({ where: { userId:user.id, active:true }, include:{ store:{ include:{ shelves:true } } } });
+  const orders = await prisma.order.findMany({ where: membership ? { OR:[{userId:user.id},{storeId:membership.storeId}] } : {userId:user.id}, include:{items:{orderBy:{id:"asc"}},store:true}, orderBy:{createdAt:"desc"} });
+  return <div className="container-page min-h-[70vh]">
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="eyebrow">Личный кабинет</p><h1 className="mt-2 text-3xl font-semibold">{membership?.store.name ?? user.shopName}</h1><p className="mt-2 text-zinc-500">{user.name} · {formatPhone(user.phone)}</p><span className="admin-chip mt-3">{roleLabel[user.role] ?? user.role}</span></div><div className="flex flex-wrap gap-2">{["DIRECTOR","ADMIN"].includes(user.role)&&<Link href="/admin" className="button-secondary">Панель управления</Link>}{["FIELD","DRIVER","DIRECTOR","ADMIN"].includes(user.role)&&<Link href="/field" className="button-secondary">Рабочий кабинет</Link>}<LogoutButton/></div></div>
+    {membership && <div className="surface-card mb-6 grid gap-4 p-5 sm:grid-cols-3"><div><span className="text-xs text-zinc-400">Адрес</span><strong className="mt-1 block">{membership.store.address}</strong></div><div><span className="text-xs text-zinc-400">Номер полки</span><strong className="mt-1 block">{membership.store.shelves.map(s=>s.code).join(", ")||"Полки нет"}</strong></div><div><span className="text-xs text-zinc-400">Геолокация</span><strong className="mt-1 block">{membership.store.latitude && membership.store.longitude ? "Указана" : "Нужно указать"}</strong></div></div>}
+    <div className="grid gap-6 lg:grid-cols-[420px_1fr]"><aside className="h-fit"><ProfileSettingsForm initialName={user.name} initialShopName={user.shopName} initialPhone={formatPhone(user.phone)} hasStore={Boolean(membership)} initialAddress={membership?.store.address ?? ""} initialLatitude={membership?.store.latitude ?? null} initialLongitude={membership?.store.longitude ?? null} /></aside><section><div className="mb-5"><h2 className="text-2xl font-semibold">Мои заказы</h2><p className="mt-1 text-sm text-zinc-500">История, суммы и текущие статусы.</p></div>{orders.length===0?<div className="surface-card border-dashed p-10 text-center"><h3 className="text-xl font-semibold">Заказов пока нет</h3><Link href="/catalog" className="button-primary mt-5">Перейти в каталог</Link></div>:<div className="space-y-4">{orders.map(order=><article key={order.id} className="surface-card p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Заказ №{order.id}</p><p className="mt-1 text-sm text-zinc-500">{formatDateTime(order.createdAt)}</p></div><div className="flex items-center gap-3"><span className="rounded-full bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700">{ORDER_STATUS_LABELS[order.status as OrderStatus]??order.status}</span><strong>{formatCurrency(order.total)}</strong></div></div><div className="mt-4 border-t border-zinc-100 pt-4 text-sm">{order.items.map(item=><div key={item.id} className="flex justify-between gap-4 py-1"><span className="text-zinc-600">{item.productName} × {item.quantity}</span><span className="font-semibold">{formatCurrency(item.price*item.quantity)}</span></div>)}</div>{order.comment&&<p className="mt-4 rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600">{order.comment}</p>}</article>)}</div>}</section></div>
+  </div>;
+}
