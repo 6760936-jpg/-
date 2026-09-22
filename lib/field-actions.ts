@@ -46,3 +46,39 @@ export async function updateStopAction(form: FormData) {
   });
   revalidatePath("/field"); revalidatePath(`/field/stops/${id}`); revalidatePath("/field/map"); revalidatePath("/admin/routes"); revalidatePath("/admin/stores"); revalidatePath("/admin/finance"); revalidatePath("/admin");
 }
+
+export async function startRouteAction(form: FormData) {
+  const user = await requireField();
+  const routeId = Number(form.get("routeId"));
+  if (!Number.isInteger(routeId) || routeId <= 0) {
+    throw new Error("Некорректный маршрут.");
+  }
+
+  const route = await prisma.deliveryRoute.findUnique({
+    where: { id: routeId },
+  });
+  if (!route) throw new Error("Маршрут не найден.");
+
+  if (
+    ["FIELD", "DRIVER"].includes(user.role) &&
+    route.assignedUserId !== user.id
+  ) {
+    throw new Error("Это не ваш маршрут.");
+  }
+
+  if (route.status === "DONE") {
+    throw new Error("Маршрут уже завершён.");
+  }
+
+  if (route.status === "IN_PROGRESS") {
+    return;
+  }
+
+  await prisma.deliveryRoute.update({
+    where: { id: routeId },
+    data: { status: "IN_PROGRESS" },
+  });
+
+  revalidatePath("/field");
+  revalidatePath("/admin/routes");
+}
