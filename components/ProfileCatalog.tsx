@@ -27,17 +27,23 @@ export function ProfileCatalog({
   products: Product[];
   categories: Category[];
 }) {
-  const { addItem, items } = useCart();
+  const { addItem } = useCart();
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [justAdded, setJustAdded] = useState<number | null>(null);
 
   const filtered =
     activeCategory === null
       ? products
       : products.filter((p) => p.categoryId === activeCategory);
 
+  function handleAdd(product: Product) {
+    addItem(product as any);
+    setJustAdded(product.id);
+    setTimeout(() => setJustAdded(null), 1500);
+  }
+
   return (
     <div>
-      {/* Табы категорий */}
       <div className="mb-5 flex flex-wrap gap-2">
         <button
           type="button"
@@ -66,7 +72,6 @@ export function ProfileCatalog({
         ))}
       </div>
 
-      {/* Товары */}
       {filtered.length === 0 ? (
         <div className="surface-card border-dashed p-10 text-center">
           <p className="text-zinc-500">В этой категории пока нет товаров.</p>
@@ -74,8 +79,8 @@ export function ProfileCatalog({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((p) => {
-            const inCart = items.find((i) => i.product.id === p.id);
             const available = p.stock > 0;
+            const added = justAdded === p.id;
 
             return (
               <div
@@ -114,18 +119,20 @@ export function ProfileCatalog({
                 <button
                   type="button"
                   disabled={!available}
-                  onClick={() => addItem(p as any)}
+                  onClick={() => handleAdd(p)}
                   className={`mt-4 w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                    available
-                      ? "bg-violet-600 text-white hover:bg-violet-700"
-                      : "cursor-not-allowed bg-zinc-100 text-zinc-400"
+                    !available
+                      ? "cursor-not-allowed bg-zinc-100 text-zinc-400"
+                      : added
+                        ? "bg-emerald-600 text-white"
+                        : "bg-violet-600 text-white hover:bg-violet-700"
                   }`}
                 >
-                  {inCart
-                    ? `В корзине: ${inCart.quantity}`
-                    : available
-                      ? "Добавить в корзину"
-                      : "Нет в наличии"}
+                  {!available
+                    ? "Нет в наличии"
+                    : added
+                      ? "✓ Добавлено"
+                      : "Добавить в корзину"}
                 </button>
               </div>
             );
