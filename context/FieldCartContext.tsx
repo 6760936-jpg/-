@@ -71,16 +71,18 @@ export function FieldCartProvider({ children }: { children: ReactNode }) {
     }
   }, [hydrated, items]);
 
+  // Устанавливает точное количество, НЕ складывает
   const addItem = useCallback((item: FieldCartItem) => {
     setItems((current) => {
       const existing = current.find((i) => i.productId === item.productId);
-      if (!existing) return [...current, item];
+      const capped = Math.min(item.quantity, item.maxQuantity);
+      if (capped <= 0) {
+        return current.filter((i) => i.productId !== item.productId);
+      }
+      if (!existing) return [...current, { ...item, quantity: capped }];
       return current.map((i) =>
         i.productId === item.productId
-          ? {
-              ...i,
-              quantity: Math.min(i.quantity + item.quantity, i.maxQuantity),
-            }
+          ? { ...i, ...item, quantity: capped }
           : i,
       );
     });
