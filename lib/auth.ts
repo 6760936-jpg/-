@@ -51,6 +51,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 export async function requireUser(nextPath = "/profile"): Promise<AuthUser> {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  // Водителей и полевых сотрудников не пускаем в кабинет магазина
+  if (["FIELD", "DRIVER"].includes(user.role)) redirect("/field");
   return user;
 }
 
