@@ -22,7 +22,6 @@ export function FieldShell({
 
   const links = [
     { href: "/field", label: "Маршруты" },
-    { href: "/field/map", label: "Карта магазинов" },
     { href: "/field/catalog", label: "Товар" },
     { href: "/field/stores/new", label: "+ Магазин" },
   ];
@@ -33,7 +32,6 @@ export function FieldShell({
   return (
     <FieldCartProvider>
       <div className="min-h-screen bg-zinc-100">
-        {/* Кнопка-гамбургер */}
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -43,7 +41,6 @@ export function FieldShell({
           <span className="text-xl">☰</span>
         </button>
 
-        {/* Затемнение фона */}
         {open && (
           <div
             onClick={() => setOpen(false)}
@@ -51,7 +48,6 @@ export function FieldShell({
           />
         )}
 
-        {/* Sidebar */}
         <aside
           className={`fixed inset-y-0 left-0 z-[120] flex w-60 flex-col border-r border-white/10 bg-zinc-950 text-white shadow-2xl transition-transform duration-300 ${
             open ? "translate-x-0" : "-translate-x-full"
@@ -113,7 +109,6 @@ export function FieldShell({
           </div>
         </aside>
 
-        {/* Контент — полная ширина */}
         <div>{children}</div>
       </div>
     </FieldCartProvider>
