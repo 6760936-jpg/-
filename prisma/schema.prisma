@@ -68,6 +68,7 @@ model User {
   movements         InventoryMovement[]
   spoilages         Spoilage[]
   vehicles          Vehicle[]
+  driverInventories DriverInventory[]
 }
 
 model Session {
@@ -360,11 +361,11 @@ model Complaint {
 
 model SiteSettings {
   id          Int      @id @default(1)
-  brandName   String   @default("ПЕРСПЕКТИВА")
-  tagline     String   @default("Оптовые решения для розницы")
+  brandName   String   @default("Р В РЎСџР В РІР‚СћР В Р’В Р В Р Р‹Р В РЎСџР В РІР‚СћР В РЎв„ўР В РЎС›Р В Р’ВР В РІР‚в„ўР В РЎвЂ™")
+  tagline     String   @default("Р В РЎвЂєР В РЎвЂ”Р РЋРІР‚С™Р В РЎвЂўР В Р вЂ Р РЋРІР‚в„–Р В Р’Вµ Р РЋР вЂљР В Р’ВµР РЋРІвЂљВ¬Р В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ Р В РўвЂР В Р’В»Р РЋР РЏ Р РЋР вЂљР В РЎвЂўР В Р’В·Р В Р вЂ¦Р В РЎвЂР РЋРІР‚В Р РЋРІР‚в„–")
   phone       String   @default("+7 900 000-00-00")
   email       String   @default("hello@example.ru")
-  city        String   @default("Ваш город")
+  city        String   @default("Р В РІР‚в„ўР В Р’В°Р РЋРІвЂљВ¬ Р В РЎвЂ“Р В РЎвЂўР РЋР вЂљР В РЎвЂўР В РўвЂ")
   accent      String   @default("#111827")
   updatedAt   DateTime @updatedAt
 }
@@ -375,19 +376,18 @@ model Vehicle {
   driverId  Int?
   createdAt DateTime @default(now())
   driver    User?    @relation(fields: [driverId], references: [id], onDelete: SetNull)
-  inventory DriverInventory[]
-
   @@index([driverId])
 }
 
 model DriverInventory {
   id        Int     @id @default(autoincrement())
-  vehicleId Int
+  userId    Int
   productId Int
   quantity  Int     @default(0)
-  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([vehicleId, productId])
+  @@unique([userId, productId])
   @@index([productId])
+  @@index([userId])
 }

@@ -82,3 +82,98 @@ export async function startRouteAction(form: FormData) {
   revalidatePath("/field");
   revalidatePath("/admin/routes");
 }
+export async function sellFromVehicleAction(form: FormData) {
+  const user = await requireField();
+
+  const productId = Number(form.get("productId"));
+  const storeId = Number(form.get("storeId"));
+  const quantity = Math.max(1, Math.trunc(Number(form.get("quantity"))));
+  const paymentMethod = String(form.get("paymentMethod") || "CASH");
+  const note = text(form, "note", 500) || null;
+
+  if (!Number.isInteger(productId) || !Number.isInteger(storeId)) {
+    throw new Error("Не указан товар или магазин.");
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+  });
+  if (!product) throw new Error("Товар не найден.");
+
+  const inventory = await prisma.driverInventory.findUnique({
+    where: { userId_productId: { userId: user.id, productId } },
+  });
+  const inCar = inventory?.quantity ?? 0;
+  if (inCar < quantity) {
+    throw new Error("Недостаточно товара в машине.");
+  }
+
+  const store = await prisma.store.findUnique({ where: { id: storeId } });
+  if (!store) throw new Error("Магазин не найден.");
+
+  const total = product.price * quantity;
+  const isDebt = paymentMethod === "DEBT";
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Уменьшаем товар у водителя
+    await tx.driverInventory.update({
+      where: { userId_productId: { userId: user.id, productId } },
+      data: { quantity: { decrement: quantity } },
+    });
+
+    // 2. Создаём заказ (продажа)
+    const order = await tx.order.create({
+      data: {
+        userId: user.id,
+        storeId,
+        status: "COMPLETED",
+        paymentStatus: isDebt ? "UNPAID" : "PAID",
+        total,
+        comment: note,
+        debtPosted: isDebt,
+        debtAmount: isDebt ? total : 0,
+        items: {
+          create: [
+            {
+              productId: product.id,
+              productName: product.name,
+              article: product.article,
+              price: product.price,
+              purchasePrice: product.purchasePrice,
+              quantity,
+            },
+          ],
+        },
+      },
+    });
+
+    // 3. Если в долг — увеличиваем долг магазина
+    if (isDebt) {
+      await tx.store.update({
+        where: { id: storeId },
+        data: { debt: { increment: total } },
+      });
+    }
+
+    // 4. Финансовая запись
+    await tx.financeEntry.create({
+      data: {
+        type: "INCOME",
+        category: isDebt ? "Продажа в долг" : "Продажа водителем",
+        amount: total,
+        note: `Заказ №${order.id}${note ? ` — ${note}` : ""}`,
+        orderId: order.id,
+        storeId,
+        paymentMethod,
+        createdById: user.id,
+      },
+    });
+  });
+
+  revalidatePath("/field");
+  revalidatePath("/field/catalog");
+  revalidatePath(`/field/stores/${storeId}`);
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  redirect("/field/catalog");
+}
