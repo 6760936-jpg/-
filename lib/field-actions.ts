@@ -177,3 +177,137 @@ export async function sellFromVehicleAction(form: FormData) {
   revalidatePath("/admin");
   redirect("/field/catalog");
 }
+export async function sellMultipleFromVehicleAction(form: FormData) {
+  const user = await requireField();
+
+  const storeId = Number(form.get("storeId"));
+  const paymentMethod = String(form.get("paymentMethod") || "CASH");
+  const note = text(form, "note", 500) || null;
+  const itemsRaw = String(form.get("items") || "[]");
+
+  if (!Number.isInteger(storeId) || storeId <= 0) {
+    throw new Error("Выберите магазин.");
+  }
+
+  type CartItem = {
+    productId: number;
+    quantity: number;
+    price: number;
+    name: string;
+    article: string;
+  };
+
+  let cartItems: CartItem[];
+  try {
+    cartItems = JSON.parse(itemsRaw) as CartItem[];
+  } catch {
+    throw new Error("Некорректные данные корзины.");
+  }
+
+  if (!Array.isArray(cartItems) || cartItems.length === 0) {
+    throw new Error("Корзина пуста.");
+  }
+
+  const store = await prisma.store.findUnique({ where: { id: storeId } });
+  if (!store) throw new Error("Магазин не найден.");
+
+  const productIds = cartItems.map((i) => Number(i.productId));
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+  });
+  const productMap = new Map(products.map((p) => [p.id, p]));
+
+  const myInventory = await prisma.driverInventory.findMany({
+    where: { userId: user.id, productId: { in: productIds } },
+  });
+  const invMap = new Map(myInventory.map((r) => [r.productId, r]));
+
+  let total = 0;
+  const orderItemsData: {
+    productId: number;
+    productName: string;
+    article: string;
+    price: number;
+    purchasePrice: number;
+    quantity: number;
+  }[] = [];
+
+  for (const item of cartItems) {
+    const product = productMap.get(item.productId);
+    if (!product) throw new Error(`Товар не найден: ${item.name}`);
+    const inv = invMap.get(item.productId);
+    const inCar = inv?.quantity ?? 0;
+    if (inCar < item.quantity) {
+      throw new Error(`Недостаточно "${product.name}" в машине (осталось ${inCar}).`);
+    }
+    total += product.price * item.quantity;
+    orderItemsData.push({
+      productId: product.id,
+      productName: product.name,
+      article: product.article,
+      price: product.price,
+      purchasePrice: product.purchasePrice,
+      quantity: item.quantity,
+    });
+  }
+
+  const isDebt = paymentMethod === "DEBT";
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Уменьшаем товар в машине
+    for (const item of cartItems) {
+      await tx.driverInventory.update({
+        where: {
+          userId_productId: {
+            userId: user.id,
+            productId: item.productId,
+          },
+        },
+        data: { quantity: { decrement: item.quantity } },
+      });
+    }
+
+    // 2. Создаём заказ
+    const order = await tx.order.create({
+      data: {
+        userId: user.id,
+        storeId,
+        status: "COMPLETED",
+        paymentStatus: isDebt ? "UNPAID" : "PAID",
+        total,
+        comment: note,
+        debtPosted: isDebt,
+        debtAmount: isDebt ? total : 0,
+        items: { create: orderItemsData },
+      },
+    });
+
+    // 3. Долг магазина
+    if (isDebt) {
+      await tx.store.update({
+        where: { id: storeId },
+        data: { debt: { increment: total } },
+      });
+    }
+
+    // 4. Финансовая запись
+    await tx.financeEntry.create({
+      data: {
+        type: "INCOME",
+        category: isDebt ? "Продажа в долг" : "Продажа водителем",
+        amount: total,
+        note: `Заказ №${order.id}${note ? ` — ${note}` : ""}`,
+        orderId: order.id,
+        storeId,
+        paymentMethod,
+        createdById: user.id,
+      },
+    });
+  });
+
+  revalidatePath("/field");
+  revalidatePath("/field/catalog");
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  redirect("/field/catalog");
+}

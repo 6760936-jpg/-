@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireField } from "@/lib/auth";
 import { formatCurrency } from "@/lib/format";
 import { startRouteAction } from "@/lib/field-actions";
+import { StoreMap, type StoreMapPoint } from "@/components/StoreMap";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function FieldPage() {
       line: true,
       stops: {
         include: {
-          store: true,
+          store: { include: { routeLine: true } },
           order: { include: { items: true } },
         },
         orderBy: { sequence: "asc" },
@@ -37,26 +38,43 @@ export default async function FieldPage() {
   );
   const visibleRoutes = todayRoutes.length ? todayRoutes : routes;
 
+  const storesMap = new Map<number, StoreMapPoint>();
+  for (const route of visibleRoutes) {
+    const isToday = route.routeDate >= start && route.routeDate < end;
+    for (const stop of route.stops) {
+      if (stop.store.latitude == null || stop.store.longitude == null) continue;
+      storesMap.set(stop.store.id, {
+        id: stop.store.id,
+        name: stop.store.name,
+        address: stop.store.address,
+        phone: stop.store.phone,
+        latitude: stop.store.latitude,
+        longitude: stop.store.longitude,
+        debt: stop.store.debt,
+        notes: stop.store.notes,
+        lineId: stop.store.routeLineId,
+        lineTitle: stop.store.routeLine?.title ?? null,
+        today: isToday,
+        stopStatus: stop.status,
+      });
+    }
+  }
+  const stores = Array.from(storesMap.values());
+
   return (
     <div className="container-page max-w-6xl">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="eyebrow">Рабочий кабинет</p>
-          <h1 className="mt-2 text-3xl font-semibold">
-            Маршруты и торговые точки
-          </h1>
-          <p className="mt-2 text-zinc-500">
-            Сегодняшние доставки, долги, комментарии и навигация по магазинам.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/field/map" className="button-primary">
-            Карта всех магазинов
-          </Link>
-          <Link href="/field/catalog" className="button-secondary">
-            Товар в наличии
-          </Link>
-        </div>
+      <div>
+        <p className="eyebrow">Рабочий кабинет</p>
+        <h1 className="mt-2 text-3xl font-semibold">
+          Маршруты и торговые точки
+        </h1>
+        <p className="mt-2 text-zinc-500">
+          Сегодняшние доставки, долги, комментарии и навигация по магазинам.
+        </p>
+      </div>
+
+      <div className="mt-8">
+        <StoreMap stores={stores} showTodayFilter={true} />
       </div>
 
       <div className="mt-8 space-y-6">
@@ -65,10 +83,7 @@ export default async function FieldPage() {
           const total = route.stops.length;
 
           return (
-            <section
-              key={route.id}
-              className="surface-card overflow-hidden"
-            >
+            <section key={route.id} className="surface-card overflow-hidden">
               <div className="border-b border-zinc-200 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -84,29 +99,22 @@ export default async function FieldPage() {
                   <div className="flex items-center gap-3">
                     {route.status === "PLANNED" && (
                       <form action={startRouteAction}>
-                        <input
-                          type="hidden"
-                          name="routeId"
-                          value={route.id}
-                        />
+                        <input type="hidden" name="routeId" value={route.id} />
                         <button className="button-primary">
                           Начать маршрут
                         </button>
                       </form>
                     )}
-
                     {route.status === "IN_PROGRESS" && (
                       <span className="rounded-full bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-700">
                         В работе
                       </span>
                     )}
-
                     {route.status === "DONE" && (
                       <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-semibold text-emerald-700">
                         Завершён
                       </span>
                     )}
-
                     <span className="admin-chip">
                       {done}/{total} выполнено
                     </span>

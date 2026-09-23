@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireField } from "@/lib/auth";
-import { ProductImage } from "@/components/ProductImage";
-import { formatCurrency } from "@/lib/format";
+import { FieldCatalogClient } from "@/components/FieldCatalogClient";
 
 export const dynamic = "force-dynamic";
 
@@ -18,81 +16,41 @@ export default async function FieldCatalogPage() {
   const myInventory = await prisma.driverInventory.findMany({
     where: { userId: user.id },
   });
-
   const myMap = new Map<number, number>();
   for (const row of myInventory) {
     myMap.set(row.productId, row.quantity);
   }
 
+  const categories = await prisma.category.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    select: { id: true, name: true },
+  });
+
+  const data = products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    article: p.article,
+    price: p.price,
+    image: p.image,
+    minOrder: p.minOrder,
+    stock: p.stock,
+    categoryId: p.categoryId,
+    categoryName: p.category.name,
+    inCar: myMap.get(p.id) ?? 0,
+  }));
+
   return (
     <div className="container-page max-w-6xl">
-      <div>
+      <div className="mb-6">
         <p className="eyebrow">Каталог на планшете</p>
         <h1 className="mt-2 text-3xl font-semibold">Товар в наличии сейчас</h1>
         <p className="mt-2 text-zinc-500">
-          Покажите ассортимент владельцу магазина и сразу назовите остаток.
+          Выберите товары в корзину — в конце оформите продажу.
         </p>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((p) => {
-          const inCar = myMap.get(p.id) ?? 0;
-
-          return (
-            <article
-              key={p.id}
-              className="surface-card flex flex-col p-3"
-            >
-              <div className="grid grid-cols-[110px_1fr] gap-4">
-                <ProductImage
-                  src={p.image}
-                  alt={p.name}
-                  className="aspect-square w-full rounded-xl"
-                />
-                <div className="min-w-0 py-1">
-                  <span className="text-xs text-violet-700">
-                    {p.category.name}
-                  </span>
-                  <h2 className="mt-1 line-clamp-2 font-semibold">
-                    {p.name}
-                  </h2>
-
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {inCar > 0 ? (
-                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                        В наличии: {inCar} шт
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-500">
-                        В машине нет
-                      </span>
-                    )}
-                    <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">
-                      На складе: {p.stock} шт
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex items-end justify-between">
-                    <strong>{formatCurrency(p.price)}</strong>
-                    <span className="text-xs text-zinc-400">
-                      Мин. {p.minOrder} шт.
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {inCar > 0 && (
-                <Link
-                  href={`/field/sell/${p.id}`}
-                  className="mt-3 block rounded-xl bg-violet-600 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-violet-700"
-                >
-                  Продать
-                </Link>
-              )}
-            </article>
-          );
-        })}
-      </div>
+      <FieldCatalogClient products={data} categories={categories} />
     </div>
   );
 }
