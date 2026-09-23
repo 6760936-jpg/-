@@ -29,6 +29,10 @@ export function FieldShell({
     links.push({ href: "/admin", label: "Управление" });
   }
 
+  function closeMenu() {
+    setOpen(false);
+  }
+
   return (
     <FieldCartProvider>
       <div className="min-h-screen bg-zinc-100">
@@ -43,7 +47,7 @@ export function FieldShell({
 
         {open && (
           <div
-            onClick={() => setOpen(false)}
+            onClick={closeMenu}
             className="fixed inset-0 z-[110] bg-black/40"
           />
         )}
@@ -54,7 +58,7 @@ export function FieldShell({
           }`}
         >
           <div className="flex items-center justify-between px-5 py-4">
-            <Link href="/field" onClick={() => setOpen(false)}>
+            <Link href="/field" onClick={closeMenu}>
               <span className="relative block h-10 w-[170px] overflow-hidden rounded-lg bg-[#090a11]">
                 <Image
                   src="/brand/perspektiva-logo.png"
@@ -67,7 +71,7 @@ export function FieldShell({
             </Link>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={closeMenu}
               className="ml-2 flex size-9 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white"
               aria-label="Закрыть меню"
             >
@@ -85,7 +89,7 @@ export function FieldShell({
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setOpen(false)}
+                  onClick={closeMenu}
                   className={`block rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                     active
                       ? "bg-violet-600 text-white"
@@ -98,7 +102,7 @@ export function FieldShell({
             })}
           </nav>
 
-          <div className="border-t border-white/10 p-4">
+          <div className="border-t border-white/10 p-4" onClick={closeMenu}>
             <div className="mb-3">
               <FieldCartButton />
             </div>
