@@ -40,19 +40,26 @@ export function ProfileCatalog({
   }
 
   function changeQty(p: Product, next: number) {
+    // 0 — удаляем
     if (next <= 0) {
       removeItem(p.id);
       return;
     }
+
     const capped = Math.min(next, p.stock);
+
+    // Если товар уже в корзине — просто обновляем количество
     const existing = items.find((i) => i.product.id === p.id);
     if (existing) {
       setQuantity(p.id, capped);
-    } else {
-      addItem(p as any);
-      if (capped !== (p.minOrder || 1)) {
-        setQuantity(p.id, capped);
-      }
+      return;
+    }
+
+    // Первое добавление — минимум minOrder
+    const start = Math.max(capped, p.minOrder);
+    addItem(p as any);
+    if (start !== p.minOrder) {
+      setQuantity(p.id, Math.min(start, p.stock));
     }
   }
 
@@ -135,8 +142,7 @@ export function ProfileCatalog({
                     <button
                       type="button"
                       onClick={() => changeQty(p, qty - 1)}
-                      disabled={qty === 0}
-                      className="flex size-10 items-center justify-center rounded-l-xl text-xl font-bold text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-300"
+                      className="flex size-10 items-center justify-center rounded-l-xl text-xl font-bold text-zinc-700 hover:bg-zinc-100"
                     >
                       −
                     </button>
@@ -146,9 +152,7 @@ export function ProfileCatalog({
                       min={0}
                       max={p.stock}
                       value={qty}
-                      onChange={(e) =>
-                        changeQty(p, Number(e.target.value))
-                      }
+                      onChange={(e) => changeQty(p, Number(e.target.value))}
                       className="w-full min-w-0 border-x border-zinc-300 py-2 text-center text-base font-semibold outline-none"
                     />
                     <button

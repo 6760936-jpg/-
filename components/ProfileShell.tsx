@@ -22,6 +22,7 @@ export function ProfileShell({
     { href: "/profile", label: "Главная" },
     { href: "/profile/warehouse", label: "Полка · Задолженность" },
     { href: "/profile/orders", label: "История заказов" },
+    { href: "/profile/feedback", label: "Жалобы и предложения" },
     { href: "/profile/settings", label: "Профиль" },
   ];
 
@@ -53,17 +54,15 @@ export function ProfileShell({
         }`}
       >
         <div className="flex items-center justify-between px-5 py-4">
-          <Link href="/profile" onClick={closeMenu}>
-            <span className="relative block h-10 w-[170px] overflow-hidden rounded-lg bg-[#090a11]">
-              <Image
-                src="/brand/perspektiva-logo.png"
-                alt="ПЕРСПЕКТИВА"
-                fill
-                sizes="170px"
-                className="scale-[1.45] object-cover object-center"
-              />
-            </span>
-          </Link>
+          <span className="relative block h-10 w-[170px] overflow-hidden rounded-lg bg-[#090a11]">
+            <Image
+              src="/brand/perspektiva-logo.png"
+              alt="ПЕРСПЕКТИВА"
+              fill
+              sizes="170px"
+              className="scale-[1.45] object-cover object-center"
+            />
+          </span>
           <button
             type="button"
             onClick={closeMenu}
