@@ -4,9 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { LogoutButton } from "@/components/LogoutButton";
+import { AuthButton } from "@/components/AuthButton";
 
-export function Header({ brandName, phone }: { brandName: string; phone: string }) {
+export function Header({
+  brandName,
+  phone,
+  isLoggedIn,
+}: {
+  brandName: string;
+  phone: string;
+  isLoggedIn: boolean;
+}) {
   const pathname = usePathname();
   const { totalItems } = useCart();
 
@@ -49,7 +57,7 @@ export function Header({ brandName, phone }: { brandName: string; phone: string 
             )}
           </Link>
 
-          <LogoutButton />
+          <AuthButton isLoggedIn={isLoggedIn} />
         </nav>
       </div>
 
