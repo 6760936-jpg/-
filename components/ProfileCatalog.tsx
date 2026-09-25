@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { ProductImage } from "@/components/ProductImage";
 import { formatCurrency } from "@/lib/format";
+import { ProfilePhotoViewer } from "@/components/ProfilePhotoViewer";
 
 type Product = {
   id: number;
@@ -13,6 +14,7 @@ type Product = {
   stock: number;
   minOrder: number;
   categoryId: number;
+  categoryName?: string;
 };
 
 type Category = {
@@ -29,6 +31,7 @@ export function ProfileCatalog({
 }) {
   const { addItem, removeItem, setQuantity, items } = useCart();
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const filtered =
     activeCategory === null
@@ -40,28 +43,43 @@ export function ProfileCatalog({
   }
 
   function changeQty(p: Product, next: number) {
-    // 0 — удаляем
-    if (next <= 0) {
-      removeItem(p.id);
+    const min = p.minOrder || 1;
+    const current = getQty(p.id);
+
+    if (current === 0 && next > 0) {
+      const start = Math.min(min, p.stock);
+      addItem(p as any);
+      if (start !== 1) {
+        setQuantity(p.id, start);
+      }
       return;
     }
 
-    const capped = Math.min(next, p.stock);
-
-    // Если товар уже в корзине — просто обновляем количество
-    const existing = items.find((i) => i.product.id === p.id);
-    if (existing) {
-      setQuantity(p.id, capped);
+    if (next < current) {
+      if (current <= min) {
+        removeItem(p.id);
+        return;
+      }
+      setQuantity(p.id, Math.max(next, min));
       return;
     }
 
-    // Первое добавление — минимум minOrder
-    const start = Math.max(capped, p.minOrder);
-    addItem(p as any);
-    if (start !== p.minOrder) {
-      setQuantity(p.id, Math.min(start, p.stock));
+    if (next > current) {
+      setQuantity(p.id, Math.min(next, p.stock));
+      return;
     }
   }
+
+  // Для просмотрщика — добавим категорию
+  const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
+  const viewerProducts = filtered.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    image: p.image,
+    stock: p.stock,
+    categoryName: categoryMap.get(p.categoryId) ?? "",
+  }));
 
   return (
     <div>
@@ -99,22 +117,28 @@ export function ProfileCatalog({
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((p) => {
+          {filtered.map((p, index) => {
             const available = p.stock > 0;
             const qty = getQty(p.id);
+            const min = p.minOrder || 1;
 
             return (
               <div
                 key={p.id}
                 className="surface-card flex flex-col p-4 transition hover:shadow-md"
               >
-                <div className="mb-3 flex h-32 items-center justify-center rounded-xl bg-zinc-50">
+                <button
+                  type="button"
+                  onClick={() => setViewerIndex(index)}
+                  className="mb-3 flex h-32 cursor-zoom-in items-center justify-center rounded-xl bg-zinc-50 transition hover:bg-zinc-100"
+                  aria-label={`Открыть фото ${p.name}`}
+                >
                   <ProductImage
                     src={p.image}
                     alt={p.name}
                     className="h-24 w-24 object-contain"
                   />
-                </div>
+                </button>
 
                 <p className="text-sm font-semibold">{p.name}</p>
 
@@ -134,7 +158,7 @@ export function ProfileCatalog({
                 </div>
 
                 <div className="mt-1 text-xs text-zinc-400">
-                  {available ? `${p.stock} шт · мин. ${p.minOrder}` : "Ожидается"}
+                  {available ? `${p.stock} шт · мин. ${min}` : "Ожидается"}
                 </div>
 
                 {available ? (
@@ -146,15 +170,9 @@ export function ProfileCatalog({
                     >
                       −
                     </button>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      max={p.stock}
-                      value={qty}
-                      onChange={(e) => changeQty(p, Number(e.target.value))}
-                      className="w-full min-w-0 border-x border-zinc-300 py-2 text-center text-base font-semibold outline-none"
-                    />
+                    <span className="w-full text-center text-base font-semibold">
+                      {qty}
+                    </span>
                     <button
                       type="button"
                       onClick={() => changeQty(p, qty + 1)}
@@ -177,6 +195,14 @@ export function ProfileCatalog({
             );
           })}
         </div>
+      )}
+
+      {viewerIndex !== null && (
+        <ProfilePhotoViewer
+          products={viewerProducts}
+          startIndex={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
       )}
     </div>
   );

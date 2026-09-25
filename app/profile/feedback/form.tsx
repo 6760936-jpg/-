@@ -3,11 +3,11 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-type FeedbackType = "COMPLAINT" | "SUGGESTION";
+type FeedbackType = "SUGGESTION" | "COMPLAINT";
 
 export function FeedbackForm() {
   const router = useRouter();
-  const [type, setType] = useState<FeedbackType>("COMPLAINT");
+  const [type, setType] = useState<FeedbackType>("SUGGESTION");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -53,17 +53,6 @@ export function FeedbackForm() {
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => setType("COMPLAINT")}
-            className={`rounded-xl border-2 px-4 py-3 text-sm font-semibold transition ${
-              type === "COMPLAINT"
-                ? "border-rose-500 bg-rose-50 text-rose-800"
-                : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
-            }`}
-          >
-            Жалоба
-          </button>
-          <button
-            type="button"
             onClick={() => setType("SUGGESTION")}
             className={`rounded-xl border-2 px-4 py-3 text-sm font-semibold transition ${
               type === "SUGGESTION"
@@ -72,6 +61,17 @@ export function FeedbackForm() {
             }`}
           >
             Предложение
+          </button>
+          <button
+            type="button"
+            onClick={() => setType("COMPLAINT")}
+            className={`rounded-xl border-2 px-4 py-3 text-sm font-semibold transition ${
+              type === "COMPLAINT"
+                ? "border-rose-500 bg-rose-50 text-rose-800"
+                : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
+            }`}
+          >
+            Жалоба
           </button>
         </div>
       </div>

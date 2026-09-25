@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/format";
 import { FeedbackForm } from "./form";
 
-export const metadata = { title: "Жалобы и предложения" };
+export const metadata = { title: "Предложения и жалобы" };
 export const dynamic = "force-dynamic";
 
 export default async function ProfileFeedbackPage() {
@@ -25,7 +25,7 @@ export default async function ProfileFeedbackPage() {
       <div className="mb-8">
         <p className="eyebrow">Обратная связь</p>
         <h1 className="mt-2 text-3xl font-semibold">
-          Жалобы и предложения
+          Предложения и жалобы
         </h1>
         <p className="mt-2 text-zinc-500">
           Сообщите о проблеме или предложите улучшение — мы ответим.

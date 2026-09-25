@@ -22,7 +22,7 @@ export function ProfileShell({
     { href: "/profile", label: "Главная" },
     { href: "/profile/warehouse", label: "Полка · Задолженность" },
     { href: "/profile/orders", label: "История заказов" },
-    { href: "/profile/feedback", label: "Жалобы и предложения" },
+    { href: "/profile/feedback", label: "Предложения и жалобы" },
     { href: "/profile/settings", label: "Профиль" },
   ];
 
@@ -38,7 +38,9 @@ export function ProfileShell({
         className="fixed left-3 top-3 z-[100] flex size-11 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-lg hover:bg-zinc-800"
         aria-label="Открыть меню"
       >
-        <span className="text-xl">☰</span>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
       </button>
 
       {open && (
@@ -69,7 +71,9 @@ export function ProfileShell({
             className="ml-2 flex size-9 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white"
             aria-label="Закрыть меню"
           >
-            ✕
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
 

@@ -14,11 +14,8 @@ export function Header({ brandName, phone }: { brandName: string; phone: string 
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur-xl">
-      <div className="mx-auto flex min-h-20 max-w-[1440px] items-center gap-4 px-4 sm:px-6 lg:px-10">
-        <span
-          className="flex shrink-0 items-center"
-          aria-label={brandName}
-        >
+      <div className="mx-auto flex min-h-20 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-10">
+        <span className="flex shrink-0 items-center" aria-label={brandName}>
           <span className="relative block h-12 w-[190px] overflow-hidden rounded-xl bg-[#090a11] sm:h-14 sm:w-[245px]">
             <Image
               src="/brand/perspektiva-logo.png"
