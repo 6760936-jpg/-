@@ -17,14 +17,14 @@ function number(form: FormData, key: string, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
 function slugify(value: string) {
-  return value.toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]+/gi, "-").replace(/^-|-$/g, "").slice(0, 80) || `category-${Date.now()}`;
+  return value.toLowerCase().replace(/С‘/g, "Рµ").replace(/[^a-zР°-СЏ0-9]+/gi, "-").replace(/^-|-$/g, "").slice(0, 80) || `category-${Date.now()}`;
 }
 async function saveFile(form: FormData, key: string, prefix: string): Promise<string | undefined> {
   const file = form.get(key);
   if (!(file instanceof File) || file.size === 0) return undefined;
-  if (file.size > 5 * 1024 * 1024) throw new Error("Файл больше 5 МБ");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Р¤Р°Р№Р» Р±РѕР»СЊС€Рµ 5 РњР‘");
   const ext = path.extname(file.name).toLowerCase() || ".jpg";
-  if (![".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext)) throw new Error("Неподдерживаемый формат изображения");
+  if (![".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext)) throw new Error("РќРµРїРѕРґРґРµСЂР¶РёРІР°РµРјС‹Р№ С„РѕСЂРјР°С‚ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ");
   const dir = path.join(process.cwd(), "public", "uploads");
   await mkdir(dir, { recursive: true });
   const name = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
@@ -35,7 +35,7 @@ async function saveFile(form: FormData, key: string, prefix: string): Promise<st
 export async function createCategoryAction(form: FormData) {
   await requireAdmin();
   const name = text(form, "name", 120);
-  if (name.length < 2) throw new Error("Укажите название категории");
+  if (name.length < 2) throw new Error("РЈРєР°Р¶РёС‚Рµ РЅР°Р·РІР°РЅРёРµ РєР°С‚РµРіРѕСЂРёРё");
   const image = await saveFile(form, "image", "category");
   let slug = slugify(text(form, "slug", 100) || name);
   const used = await prisma.category.findUnique({ where: { slug } });
@@ -47,7 +47,7 @@ export async function createCategoryAction(form: FormData) {
 export async function deleteCategoryAction(form: FormData) {
   await requireAdmin();
   const id = number(form, "id");
-  if (await prisma.product.count({ where: { categoryId: id } })) throw new Error("Сначала перенесите или удалите товары категории");
+  if (await prisma.product.count({ where: { categoryId: id } })) throw new Error("РЎРЅР°С‡Р°Р»Р° РїРµСЂРµРЅРµСЃРёС‚Рµ РёР»Рё СѓРґР°Р»РёС‚Рµ С‚РѕРІР°СЂС‹ РєР°С‚РµРіРѕСЂРёРё");
   await prisma.category.delete({ where: { id } });
   revalidatePath("/admin/categories"); revalidatePath("/");
 }
@@ -57,7 +57,7 @@ export async function createStoreAction(form: FormData) {
   const image = await saveFile(form, "exteriorImage", "store");
   const latitude = text(form, "latitude") ? number(form, "latitude") : null;
   const longitude = text(form, "longitude") ? number(form, "longitude") : null;
-  if (latitude === null || longitude === null || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) throw new Error("Укажите точку магазина на карте.");
+  if (latitude === null || longitude === null || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) throw new Error("РЈРєР°Р¶РёС‚Рµ С‚РѕС‡РєСѓ РјР°РіР°Р·РёРЅР° РЅР° РєР°СЂС‚Рµ.");
   const store = await prisma.store.create({
     data: {
       name: text(form, "name", 150), phone: text(form, "phone", 40) || null, address: text(form, "address", 250),
@@ -80,7 +80,7 @@ export async function createStoreAction(form: FormData) {
 export async function createShelfAction(form: FormData) {
   await requireAdmin();
   const code = text(form, "code", 32).toUpperCase();
-  if (!/^[A-ZА-Я0-9-]{2,32}$/i.test(code)) throw new Error("Некорректный номер полки");
+  if (!/^[A-ZРђ-РЇ0-9-]{2,32}$/i.test(code)) throw new Error("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РЅРѕРјРµСЂ РїРѕР»РєРё");
   const storeId = number(form, "storeId", 0) || null;
   await prisma.shelf.create({ data: { code, storeId, status: storeId ? "INSTALLED" : "IN_STOCK", installedAt: storeId ? new Date() : null, notes: text(form, "notes", 500) || null } });
   revalidatePath("/admin/shelves"); revalidatePath("/admin/stores");
@@ -101,20 +101,20 @@ export async function deletePromotionAction(form: FormData) {
 
 export async function createFinanceEntryAction(form: FormData) {
   const user = await requireAdmin();
-  if (user.role !== "DIRECTOR") throw new Error("Финансы доступны только генеральному директору.");
+  if (user.role !== "DIRECTOR") throw new Error("Р¤РёРЅР°РЅСЃС‹ РґРѕСЃС‚СѓРїРЅС‹ С‚РѕР»СЊРєРѕ РіРµРЅРµСЂР°Р»СЊРЅРѕРјСѓ РґРёСЂРµРєС‚РѕСЂСѓ.");
   const type = text(form, "type", 20);
   const amount = Math.max(0, number(form, "amount"));
   const category = text(form, "category", 80);
-  if (!['INCOME','EXPENSE'].includes(type) || amount <= 0 || category.length < 2) throw new Error("Укажите корректную операцию, статью и сумму.");
+  if (!['INCOME','EXPENSE'].includes(type) || amount <= 0 || category.length < 2) throw new Error("РЈРєР°Р¶РёС‚Рµ РєРѕСЂСЂРµРєС‚РЅСѓСЋ РѕРїРµСЂР°С†РёСЋ, СЃС‚Р°С‚СЊСЋ Рё СЃСѓРјРјСѓ.");
   const knownCategory = await prisma.financeCategory.findUnique({ where: { name_type: { name: category, type } } });
-  if (!knownCategory?.active) throw new Error("Выберите активную статью соответствующего типа или сначала добавьте её ниже.");
+  if (!knownCategory?.active) throw new Error("Р’С‹Р±РµСЂРёС‚Рµ Р°РєС‚РёРІРЅСѓСЋ СЃС‚Р°С‚СЊСЋ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРіРѕ С‚РёРїР° РёР»Рё СЃРЅР°С‡Р°Р»Р° РґРѕР±Р°РІСЊС‚Рµ РµС‘ РЅРёР¶Рµ.");
   const storeId = Math.trunc(number(form, "storeId", 0)) || null;
   const entryData = { type, category, amount, note: text(form, "note", 500) || null, entryDate: form.get("entryDate") ? new Date(String(form.get("entryDate")) + "T12:00:00") : new Date(), storeId, paymentMethod: text(form, "paymentMethod", 40) || null, createdById: user.id };
-  if (type === "INCOME" && category === "Оплата магазина") {
-    if (!storeId) throw new Error("Для оплаты магазина выберите магазин.");
+  if (type === "INCOME" && category === "РћРїР»Р°С‚Р° РјР°РіР°Р·РёРЅР°") {
+    if (!storeId) throw new Error("Р”Р»СЏ РѕРїР»Р°С‚С‹ РјР°РіР°Р·РёРЅР° РІС‹Р±РµСЂРёС‚Рµ РјР°РіР°Р·РёРЅ.");
     const store = await prisma.store.findUnique({ where: { id: storeId }, select: { debt: true } });
-    if (!store || store.debt <= 0) throw new Error("У выбранного магазина нет задолженности.");
-    if (amount > store.debt) throw new Error("Сумма оплаты больше текущего долга магазина.");
+    if (!store || store.debt <= 0) throw new Error("РЈ РІС‹Р±СЂР°РЅРЅРѕРіРѕ РјР°РіР°Р·РёРЅР° РЅРµС‚ Р·Р°РґРѕР»Р¶РµРЅРЅРѕСЃС‚Рё.");
+    if (amount > store.debt) throw new Error("РЎСѓРјРјР° РѕРїР»Р°С‚С‹ Р±РѕР»СЊС€Рµ С‚РµРєСѓС‰РµРіРѕ РґРѕР»РіР° РјР°РіР°Р·РёРЅР°.");
     await prisma.$transaction([
       prisma.store.update({ where: { id: storeId }, data: { debt: store.debt - amount } }),
       prisma.financeEntry.create({ data: entryData }),
@@ -130,7 +130,7 @@ export async function createSpoilageAction(form: FormData) {
   const productId = number(form, "productId");
   const quantity = Math.max(1, Math.trunc(number(form, "quantity", 1)));
   const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product) throw new Error("Товар не найден");
+  if (!product) throw new Error("РўРѕРІР°СЂ РЅРµ РЅР°Р№РґРµРЅ");
   const photo = await saveFile(form, "photo", "spoilage");
   await prisma.$transaction([
     prisma.spoilage.create({ data: { productId, userId: user.id, quantity, amount: number(form, "amount", product.purchasePrice * quantity), reason: text(form, "reason", 300), photo } }),
@@ -142,8 +142,19 @@ export async function createSpoilageAction(form: FormData) {
 
 export async function createComplaintAction(form: FormData) {
   const user = await requireAdmin();
-  await prisma.complaint.create({ data: { storeId: number(form, "storeId"), title: text(form, "title", 180), description: text(form, "description", 2000), status: "NEW", createdById: user.id } });
-  revalidatePath("/admin"); revalidatePath("/admin/complaints");
+  const type = text(form, "type", 20) === "SUGGESTION" ? "SUGGESTION" : "COMPLAINT";
+  await prisma.complaint.create({
+    data: {
+      storeId: number(form, "storeId"),
+      type,
+      title: text(form, "title", 180),
+      description: text(form, "description", 2000),
+      status: "NEW",
+      createdById: user.id,
+    },
+  });
+  revalidatePath("/admin");
+  revalidatePath("/admin/complaints");
 }
 
 export async function updateComplaintStatusAction(form: FormData) {
@@ -169,10 +180,10 @@ export async function mergeStoreAction(form: FormData) {
   await requireAdmin();
   const sourceId = number(form, "sourceId");
   const targetId = number(form, "targetId");
-  if (!sourceId || !targetId || sourceId === targetId) throw new Error("Выберите другой существующий магазин");
+  if (!sourceId || !targetId || sourceId === targetId) throw new Error("Р’С‹Р±РµСЂРёС‚Рµ РґСЂСѓРіРѕР№ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РјР°РіР°Р·РёРЅ");
   const source = await prisma.store.findUnique({ where: { id: sourceId }, include: { memberships: true } });
   const target = await prisma.store.findUnique({ where: { id: targetId } });
-  if (!source || !target) throw new Error("Магазин не найден");
+  if (!source || !target) throw new Error("РњР°РіР°Р·РёРЅ РЅРµ РЅР°Р№РґРµРЅ");
   await prisma.$transaction(async (tx) => {
     for (const membership of source.memberships) {
       await tx.storeMembership.upsert({
@@ -204,8 +215,8 @@ export async function updateStoreAction(form: FormData) {
   const latitude = latitudeText ? number(form, "latitude") : null;
   const longitude = longitudeText ? number(form, "longitude") : null;
   const routeLineId = Math.trunc(number(form, "routeLineId", 0)) || null;
-  if (!id || name.length < 2 || address.length < 4) throw new Error("Заполните название и адрес магазина.");
-  if (latitude === null || longitude === null || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) throw new Error("Укажите точку магазина на карте.");
+  if (!id || name.length < 2 || address.length < 4) throw new Error("Р—Р°РїРѕР»РЅРёС‚Рµ РЅР°Р·РІР°РЅРёРµ Рё Р°РґСЂРµСЃ РјР°РіР°Р·РёРЅР°.");
+  if (latitude === null || longitude === null || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) throw new Error("РЈРєР°Р¶РёС‚Рµ С‚РѕС‡РєСѓ РјР°РіР°Р·РёРЅР° РЅР° РєР°СЂС‚Рµ.");
   await prisma.store.update({ where: { id }, data: {
     name,
     phone: text(form, "phone", 40) || null,
@@ -226,7 +237,7 @@ export async function updateStoreAction(form: FormData) {
 export async function createRouteLineAction(form: FormData) {
   await requireAdmin();
   const title = text(form, "title", 120);
-  if (title.length < 2) throw new Error("Укажите название линии.");
+  if (title.length < 2) throw new Error("РЈРєР°Р¶РёС‚Рµ РЅР°Р·РІР°РЅРёРµ Р»РёРЅРёРё.");
   await prisma.routeLine.create({ data: { title, areaSummary: text(form, "areaSummary", 500) || null, notes: text(form, "notes", 1000) || null } });
   revalidatePath("/admin/routes");
 }
@@ -242,7 +253,7 @@ export async function moveStoresToLineAction(form: FormData) {
   await requireAdmin();
   const targetLineId = Math.trunc(number(form, "targetLineId", 0)) || null;
   const ids = form.getAll("storeIds").map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0);
-  if (!ids.length) throw new Error("Выберите хотя бы один магазин.");
+  if (!ids.length) throw new Error("Р’С‹Р±РµСЂРёС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ РјР°РіР°Р·РёРЅ.");
   const moving = await prisma.store.findMany({ where: { id: { in: ids } }, select: { id: true, routeLineId: true } });
   const affectedSourceLines = Array.from(new Set(moving.map((store) => store.routeLineId).filter((id): id is number => id !== null && id !== targetLineId)));
   const lastTarget = targetLineId ? await prisma.store.findFirst({ where: { routeLineId: targetLineId, id: { notIn: ids } }, orderBy: [{ routeOrder: "desc" }, { id: "desc" }], select: { routeOrder: true } }) : null;
@@ -265,7 +276,7 @@ export async function createDeliveryRouteAction(form: FormData) {
   const assignedUserId = Math.trunc(number(form, "assignedUserId", 0)) || null;
   const dateValue = text(form, "routeDate", 30);
   const line = await prisma.routeLine.findUnique({ where: { id: lineId } });
-  if (!line || !dateValue) throw new Error("Выберите линию и дату.");
+  if (!line || !dateValue) throw new Error("Р’С‹Р±РµСЂРёС‚Рµ Р»РёРЅРёСЋ Рё РґР°С‚Сѓ.");
   const onlyWithOrders = form.get("onlyWithOrders") === "on";
   const stores = await prisma.store.findMany({
     where: { routeLineId: lineId, status: { not: "PAUSED" } },
@@ -273,9 +284,9 @@ export async function createDeliveryRouteAction(form: FormData) {
     orderBy: [{ routeOrder: "asc" }, { id: "asc" }],
   });
   const selected = onlyWithOrders ? stores.filter((store) => store.orders.length > 0) : stores;
-  if (!selected.length) throw new Error("В этой линии нет подходящих магазинов.");
+  if (!selected.length) throw new Error("Р’ СЌС‚РѕР№ Р»РёРЅРёРё РЅРµС‚ РїРѕРґС…РѕРґСЏС‰РёС… РјР°РіР°Р·РёРЅРѕРІ.");
   await prisma.deliveryRoute.create({ data: {
-    title: text(form, "title", 160) || `${line.title} — ${dateValue}`,
+    title: text(form, "title", 160) || `${line.title} вЂ” ${dateValue}`,
     routeDate: new Date(`${dateValue}T12:00:00`),
     lineId,
     assignedUserId,
@@ -290,7 +301,7 @@ export async function addRouteStopAction(form: FormData) {
   const routeId = Math.trunc(number(form, "routeId"));
   const storeId = Math.trunc(number(form, "storeId"));
   const existing = await prisma.routeStop.findFirst({ where: { routeId, storeId } });
-  if (existing) throw new Error("Этот магазин уже есть в маршруте.");
+  if (existing) throw new Error("Р­С‚РѕС‚ РјР°РіР°Р·РёРЅ СѓР¶Рµ РµСЃС‚СЊ РІ РјР°СЂС€СЂСѓС‚Рµ.");
   const last = await prisma.routeStop.findFirst({ where: { routeId }, orderBy: { sequence: "desc" } });
   const order = await prisma.order.findFirst({ where: { storeId, status: { in: ["NEW", "PROCESSING"] }, routeStop: null }, orderBy: { createdAt: "asc" } });
   await prisma.routeStop.create({ data: { routeId, storeId, orderId: order?.id ?? null, sequence: (last?.sequence ?? 0) + 1 } });
@@ -337,16 +348,16 @@ export async function moveRouteStopAction(form: FormData) {
 
 export async function createFinanceCategoryAction(form: FormData) {
   const user = await requireAdmin();
-  if (user.role !== "DIRECTOR") throw new Error("Недостаточно прав.");
+  if (user.role !== "DIRECTOR") throw new Error("РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РїСЂР°РІ.");
   const name = text(form, "name", 80); const type = text(form, "type", 20);
-  if (name.length < 2 || !["INCOME", "EXPENSE"].includes(type)) throw new Error("Заполните категорию.");
+  if (name.length < 2 || !["INCOME", "EXPENSE"].includes(type)) throw new Error("Р—Р°РїРѕР»РЅРёС‚Рµ РєР°С‚РµРіРѕСЂРёСЋ.");
   await prisma.financeCategory.upsert({ where: { name_type: { name, type } }, update: { active: true }, create: { name, type } });
   revalidatePath("/admin/finance");
 }
 
 export async function toggleFinanceCategoryAction(form: FormData) {
   const user = await requireAdmin();
-  if (user.role !== "DIRECTOR") throw new Error("Недостаточно прав.");
+  if (user.role !== "DIRECTOR") throw new Error("РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РїСЂР°РІ.");
   const id = Math.trunc(number(form, "id"));
   const category = await prisma.financeCategory.findUnique({ where: { id } });
   if (!category) return;
@@ -356,7 +367,7 @@ export async function toggleFinanceCategoryAction(form: FormData) {
 
 export async function reverseFinanceEntryAction(form: FormData) {
   const user = await requireAdmin();
-  if (user.role !== "DIRECTOR") throw new Error("Недостаточно прав.");
+  if (user.role !== "DIRECTOR") throw new Error("РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РїСЂР°РІ.");
   const id = Math.trunc(number(form, "id"));
   const entry = await prisma.financeEntry.findUnique({ where: { id } });
   if (!entry || entry.isReversal) return;
@@ -367,7 +378,7 @@ export async function reverseFinanceEntryAction(form: FormData) {
       type: entry.type,
       category: entry.category,
       amount: -entry.amount,
-      note: `Сторно операции №${entry.id}${entry.note ? ` — ${entry.note}` : ""}`,
+      note: `РЎС‚РѕСЂРЅРѕ РѕРїРµСЂР°С†РёРё в„–${entry.id}${entry.note ? ` вЂ” ${entry.note}` : ""}`,
       entryDate: new Date(),
       storeId: entry.storeId,
       paymentMethod: entry.paymentMethod,
@@ -375,7 +386,7 @@ export async function reverseFinanceEntryAction(form: FormData) {
       reversalOfId: entry.id,
       createdById: user.id,
     } });
-    if (entry.type === "INCOME" && entry.category === "Оплата магазина" && entry.storeId) {
+    if (entry.type === "INCOME" && entry.category === "РћРїР»Р°С‚Р° РјР°РіР°Р·РёРЅР°" && entry.storeId) {
       await tx.store.update({ where: { id: entry.storeId }, data: { debt: { increment: entry.amount } } });
     }
   });
@@ -387,7 +398,7 @@ export async function updateDeliveryRouteAction(form: FormData) {
   const id = Math.trunc(number(form, "id"));
   const dateValue = text(form, "routeDate", 30);
   const assignedUserId = Math.trunc(number(form, "assignedUserId", 0)) || null;
-  if (!id || !dateValue) throw new Error("Укажите маршрут и дату.");
+  if (!id || !dateValue) throw new Error("РЈРєР°Р¶РёС‚Рµ РјР°СЂС€СЂСѓС‚ Рё РґР°С‚Сѓ.");
   await prisma.deliveryRoute.update({
     where: { id },
     data: {
@@ -408,8 +419,8 @@ export async function createStaffAction(form: FormData) {
   const password = text(form, "password", 120);
   const role = text(form, "role", 30);
   const allowed = current.role === "DIRECTOR" ? ["ADMIN", "FIELD", "DRIVER", "MANAGER", "WAREHOUSE"] : ["FIELD", "DRIVER", "MANAGER", "WAREHOUSE"];
-  if (name.length < 2 || !phone || password.length < 8 || !allowed.includes(role)) throw new Error("Проверьте имя, российский телефон, пароль и роль сотрудника.");
-  await prisma.user.create({ data: { name, phone, shopName: "ПЕРСПЕКТИВА", role, active: true, passwordHash: await hashPassword(password) } });
+  if (name.length < 2 || !phone || password.length < 8 || !allowed.includes(role)) throw new Error("РџСЂРѕРІРµСЂСЊС‚Рµ РёРјСЏ, СЂРѕСЃСЃРёР№СЃРєРёР№ С‚РµР»РµС„РѕРЅ, РїР°СЂРѕР»СЊ Рё СЂРѕР»СЊ СЃРѕС‚СЂСѓРґРЅРёРєР°.");
+  await prisma.user.create({ data: { name, phone, shopName: "РџР•Р РЎРџР•РљРўРР’Рђ", role, active: true, passwordHash: await hashPassword(password) } });
   revalidatePath("/admin/team"); revalidatePath("/admin/routes");
 }
 
@@ -417,10 +428,10 @@ export async function updateStaffAction(form: FormData) {
   const current = await requireAdmin();
   const id = Math.trunc(number(form, "id"));
   const target = await prisma.user.findUnique({ where: { id } });
-  if (!target || target.role === "DIRECTOR") throw new Error("Эту учётную запись нельзя изменить здесь.");
+  if (!target || target.role === "DIRECTOR") throw new Error("Р­С‚Сѓ СѓС‡С‘С‚РЅСѓСЋ Р·Р°РїРёСЃСЊ РЅРµР»СЊР·СЏ РёР·РјРµРЅРёС‚СЊ Р·РґРµСЃСЊ.");
   const role = text(form, "role", 30);
   const allowed = current.role === "DIRECTOR" ? ["ADMIN", "FIELD", "DRIVER", "MANAGER", "WAREHOUSE"] : ["FIELD", "DRIVER", "MANAGER", "WAREHOUSE"];
-  if (!allowed.includes(role)) throw new Error("Недостаточно прав для этой роли.");
+  if (!allowed.includes(role)) throw new Error("РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РїСЂР°РІ РґР»СЏ СЌС‚РѕР№ СЂРѕР»Рё.");
   const password = text(form, "password", 120);
   const data = { name: text(form, "name", 120) || target.name, role, active: form.get("active") === "true", ...(password ? { passwordHash: await hashPassword(password) } : {}) };
   if (password) {
