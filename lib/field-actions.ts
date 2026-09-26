@@ -16,8 +16,8 @@ async function saveImage(form: FormData, key: string) {
 export async function createFieldStoreAction(form: FormData) {
   const user = await requireField(); const image = await saveImage(form, "exteriorImage");
   const latitude = num(form, "latitude"); const longitude = num(form, "longitude");
-  if (latitude === null || longitude === null || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) throw new Error("Укажите точку магазина на карте.");
-  const store = await prisma.store.create({ data: { name: text(form,"name",150), phone: text(form,"phone",40)||null, address: text(form,"address",250), latitude, longitude, exteriorImage:image, contactName:text(form,"contactName",120)||null, openingHours:text(form,"openingHours",120)||null, notes:text(form,"notes",1000)||null, status:"LEAD", source:"FIELD", createdById:user.id } });
+  if (latitude === null || longitude === null || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) throw new Error("РЈРєР°Р¶РёС‚Рµ С‚РѕС‡РєСѓ РјР°РіР°Р·РёРЅР° РЅР° РєР°СЂС‚Рµ.");
+  const store = await prisma.store.create({ data: { name: text(form,"name",150), phone: text(form,"phone",40)||null, settlement: text(form,"settlement",150)||null, address: text(form,"address",250), latitude, longitude, exteriorImage:image, contactName:text(form,"contactName",120)||null, openingHours:text(form,"openingHours",120)||null, notes:text(form,"notes",1000)||null, status:"LEAD", source:"FIELD", createdById:user.id } });
   const shelfCode = text(form,"shelfCode",32).toUpperCase();
   if (shelfCode) await prisma.shelf.upsert({ where:{code:shelfCode}, update:{storeId:store.id,status:"INSTALLED",installedAt:new Date()}, create:{code:shelfCode,storeId:store.id,status:"INSTALLED",installedAt:new Date()} });
   revalidatePath("/field"); revalidatePath("/admin/stores"); redirect(`/field/stores/${store.id}`);
@@ -27,9 +27,9 @@ export async function updateStopAction(form: FormData) {
   const id = Number(form.get("id"));
   const status = text(form,"status",30);
   const note = text(form,"note",1000)||null;
-  if (!Number.isInteger(id) || id <= 0 || !["PLANNED", "ARRIVED", "DONE", "PROBLEM"].includes(status)) throw new Error("Некорректный статус визита.");
+  if (!Number.isInteger(id) || id <= 0 || !["PLANNED", "ARRIVED", "DONE", "PROBLEM"].includes(status)) throw new Error("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ СЃС‚Р°С‚СѓСЃ РІРёР·РёС‚Р°.");
   const stop = await prisma.routeStop.findUnique({ where:{id}, include:{ order:true } });
-  if (!stop) throw new Error("Точка маршрута не найдена.");
+  if (!stop) throw new Error("РўРѕС‡РєР° РјР°СЂС€СЂСѓС‚Р° РЅРµ РЅР°Р№РґРµРЅР°.");
   await prisma.$transaction(async (tx) => {
     await tx.routeStop.update({ where:{id}, data:{status,note} });
     if (status === "DONE" && stop.status !== "DONE" && stop.order && stop.order.status !== "CANCELLED") {
@@ -51,23 +51,23 @@ export async function startRouteAction(form: FormData) {
   const user = await requireField();
   const routeId = Number(form.get("routeId"));
   if (!Number.isInteger(routeId) || routeId <= 0) {
-    throw new Error("Некорректный маршрут.");
+    throw new Error("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РјР°СЂС€СЂСѓС‚.");
   }
 
   const route = await prisma.deliveryRoute.findUnique({
     where: { id: routeId },
   });
-  if (!route) throw new Error("Маршрут не найден.");
+  if (!route) throw new Error("РњР°СЂС€СЂСѓС‚ РЅРµ РЅР°Р№РґРµРЅ.");
 
   if (
     ["FIELD", "DRIVER"].includes(user.role) &&
     route.assignedUserId !== user.id
   ) {
-    throw new Error("Это не ваш маршрут.");
+    throw new Error("Р­С‚Рѕ РЅРµ РІР°С€ РјР°СЂС€СЂСѓС‚.");
   }
 
   if (route.status === "DONE") {
-    throw new Error("Маршрут уже завершён.");
+    throw new Error("РњР°СЂС€СЂСѓС‚ СѓР¶Рµ Р·Р°РІРµСЂС€С‘РЅ.");
   }
 
   if (route.status === "IN_PROGRESS") {
@@ -92,36 +92,36 @@ export async function sellFromVehicleAction(form: FormData) {
   const note = text(form, "note", 500) || null;
 
   if (!Number.isInteger(productId) || !Number.isInteger(storeId)) {
-    throw new Error("Не указан товар или магазин.");
+    throw new Error("РќРµ СѓРєР°Р·Р°РЅ С‚РѕРІР°СЂ РёР»Рё РјР°РіР°Р·РёРЅ.");
   }
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
   });
-  if (!product) throw new Error("Товар не найден.");
+  if (!product) throw new Error("РўРѕРІР°СЂ РЅРµ РЅР°Р№РґРµРЅ.");
 
   const inventory = await prisma.driverInventory.findUnique({
     where: { userId_productId: { userId: user.id, productId } },
   });
   const inCar = inventory?.quantity ?? 0;
   if (inCar < quantity) {
-    throw new Error("Недостаточно товара в машине.");
+    throw new Error("РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ С‚РѕРІР°СЂР° РІ РјР°С€РёРЅРµ.");
   }
 
   const store = await prisma.store.findUnique({ where: { id: storeId } });
-  if (!store) throw new Error("Магазин не найден.");
+  if (!store) throw new Error("РњР°РіР°Р·РёРЅ РЅРµ РЅР°Р№РґРµРЅ.");
 
   const total = product.price * quantity;
   const isDebt = paymentMethod === "DEBT";
 
   await prisma.$transaction(async (tx) => {
-    // 1. Уменьшаем товар у водителя
+    // 1. РЈРјРµРЅСЊС€Р°РµРј С‚РѕРІР°СЂ Сѓ РІРѕРґРёС‚РµР»СЏ
     await tx.driverInventory.update({
       where: { userId_productId: { userId: user.id, productId } },
       data: { quantity: { decrement: quantity } },
     });
 
-    // 2. Создаём заказ (продажа)
+    // 2. РЎРѕР·РґР°С‘Рј Р·Р°РєР°Р· (РїСЂРѕРґР°Р¶Р°)
     const order = await tx.order.create({
       data: {
         userId: user.id,
@@ -147,7 +147,7 @@ export async function sellFromVehicleAction(form: FormData) {
       },
     });
 
-    // 3. Если в долг — увеличиваем долг магазина
+    // 3. Р•СЃР»Рё РІ РґРѕР»Рі вЂ” СѓРІРµР»РёС‡РёРІР°РµРј РґРѕР»Рі РјР°РіР°Р·РёРЅР°
     if (isDebt) {
       await tx.store.update({
         where: { id: storeId },
@@ -155,13 +155,13 @@ export async function sellFromVehicleAction(form: FormData) {
       });
     }
 
-    // 4. Финансовая запись
+    // 4. Р¤РёРЅР°РЅСЃРѕРІР°СЏ Р·Р°РїРёСЃСЊ
     await tx.financeEntry.create({
       data: {
         type: "INCOME",
-        category: isDebt ? "Продажа в долг" : "Продажа водителем",
+        category: isDebt ? "РџСЂРѕРґР°Р¶Р° РІ РґРѕР»Рі" : "РџСЂРѕРґР°Р¶Р° РІРѕРґРёС‚РµР»РµРј",
         amount: total,
-        note: `Заказ №${order.id}${note ? ` — ${note}` : ""}`,
+        note: `Р—Р°РєР°Р· в„–${order.id}${note ? ` вЂ” ${note}` : ""}`,
         orderId: order.id,
         storeId,
         paymentMethod,
@@ -186,7 +186,7 @@ export async function sellMultipleFromVehicleAction(form: FormData) {
   const itemsRaw = String(form.get("items") || "[]");
 
   if (!Number.isInteger(storeId) || storeId <= 0) {
-    throw new Error("Выберите магазин.");
+    throw new Error("Р’С‹Р±РµСЂРёС‚Рµ РјР°РіР°Р·РёРЅ.");
   }
 
   type CartItem = {
@@ -201,15 +201,15 @@ export async function sellMultipleFromVehicleAction(form: FormData) {
   try {
     cartItems = JSON.parse(itemsRaw) as CartItem[];
   } catch {
-    throw new Error("Некорректные данные корзины.");
+    throw new Error("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґР°РЅРЅС‹Рµ РєРѕСЂР·РёРЅС‹.");
   }
 
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
-    throw new Error("Корзина пуста.");
+    throw new Error("РљРѕСЂР·РёРЅР° РїСѓСЃС‚Р°.");
   }
 
   const store = await prisma.store.findUnique({ where: { id: storeId } });
-  if (!store) throw new Error("Магазин не найден.");
+  if (!store) throw new Error("РњР°РіР°Р·РёРЅ РЅРµ РЅР°Р№РґРµРЅ.");
 
   const productIds = cartItems.map((i) => Number(i.productId));
   const products = await prisma.product.findMany({
@@ -234,11 +234,11 @@ export async function sellMultipleFromVehicleAction(form: FormData) {
 
   for (const item of cartItems) {
     const product = productMap.get(item.productId);
-    if (!product) throw new Error(`Товар не найден: ${item.name}`);
+    if (!product) throw new Error(`РўРѕРІР°СЂ РЅРµ РЅР°Р№РґРµРЅ: ${item.name}`);
     const inv = invMap.get(item.productId);
     const inCar = inv?.quantity ?? 0;
     if (inCar < item.quantity) {
-      throw new Error(`Недостаточно "${product.name}" в машине (осталось ${inCar}).`);
+      throw new Error(`РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ "${product.name}" РІ РјР°С€РёРЅРµ (РѕСЃС‚Р°Р»РѕСЃСЊ ${inCar}).`);
     }
     total += product.price * item.quantity;
     orderItemsData.push({
@@ -254,7 +254,7 @@ export async function sellMultipleFromVehicleAction(form: FormData) {
   const isDebt = paymentMethod === "DEBT";
 
   await prisma.$transaction(async (tx) => {
-    // 1. Уменьшаем товар в машине
+    // 1. РЈРјРµРЅСЊС€Р°РµРј С‚РѕРІР°СЂ РІ РјР°С€РёРЅРµ
     for (const item of cartItems) {
       await tx.driverInventory.update({
         where: {
@@ -267,7 +267,7 @@ export async function sellMultipleFromVehicleAction(form: FormData) {
       });
     }
 
-    // 2. Создаём заказ
+    // 2. РЎРѕР·РґР°С‘Рј Р·Р°РєР°Р·
     const order = await tx.order.create({
       data: {
         userId: user.id,
@@ -282,7 +282,7 @@ export async function sellMultipleFromVehicleAction(form: FormData) {
       },
     });
 
-    // 3. Долг магазина
+    // 3. Р”РѕР»Рі РјР°РіР°Р·РёРЅР°
     if (isDebt) {
       await tx.store.update({
         where: { id: storeId },
@@ -290,13 +290,13 @@ export async function sellMultipleFromVehicleAction(form: FormData) {
       });
     }
 
-    // 4. Финансовая запись
+    // 4. Р¤РёРЅР°РЅСЃРѕРІР°СЏ Р·Р°РїРёСЃСЊ
     await tx.financeEntry.create({
       data: {
         type: "INCOME",
-        category: isDebt ? "Продажа в долг" : "Продажа водителем",
+        category: isDebt ? "РџСЂРѕРґР°Р¶Р° РІ РґРѕР»Рі" : "РџСЂРѕРґР°Р¶Р° РІРѕРґРёС‚РµР»РµРј",
         amount: total,
-        note: `Заказ №${order.id}${note ? ` — ${note}` : ""}`,
+        note: `Р—Р°РєР°Р· в„–${order.id}${note ? ` вЂ” ${note}` : ""}`,
         orderId: order.id,
         storeId,
         paymentMethod,
