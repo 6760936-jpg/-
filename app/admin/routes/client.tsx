@@ -83,6 +83,7 @@ export function RoutesClient({
   const mapRef = useRef<any>(null);
   const layerRef = useRef<any>(null);
   const [lineFilter, setLineFilter] = useState<string>("all");
+  const [mapReady, setMapReady] = useState(false);
 
   const visible = useMemo(() => {
     if (lineFilter === "all") return points;
@@ -102,7 +103,10 @@ export function RoutesClient({
         }).addTo(map);
         layerRef.current = L.layerGroup().addTo(map);
         mapRef.current = map;
-        setTimeout(() => map.invalidateSize(), 100);
+        setTimeout(() => {
+          map.invalidateSize();
+          setMapReady(true);
+        }, 100);
       })
       .catch(() => undefined);
     return () => {
@@ -121,6 +125,8 @@ export function RoutesClient({
     if (!L || !map || !layerRef.current) return;
     layerRef.current.clearLayers();
     const bounds: [number, number][] = [];
+
+    setTimeout(() => map.invalidateSize(), 50);
 
     for (const p of visible) {
       const color = p.lineId ? "#7c3aed" : "#f59e0b";
@@ -178,8 +184,8 @@ export function RoutesClient({
         map.setView([55.75, 37.62], 5);
       }
       map.invalidateSize();
-    }, 200);
-  }, [visible, lines]);
+    }, 100);
+  }, [visible, lines, mapReady]);
 
   useEffect(() => {
     (window as any).__assignLine = async (storeId: number) => {
