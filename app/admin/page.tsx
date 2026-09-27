@@ -4,7 +4,7 @@ import { formatCurrency } from "@/lib/format";
 import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "ПЕРСПЕКТИВА — управление" };
+export const metadata = { title: "Операционный центр" };
 
 export default async function AdminDashboardPage() {
   const user = await requireAdmin();
@@ -39,7 +39,7 @@ export default async function AdminDashboardPage() {
     }),
     prisma.financeEntry.findMany({ where: { entryDate: { gte: monthStart } } }),
     prisma.spoilage.aggregate({ where: { createdAt: { gte: monthStart } }, _sum: { amount: true } }),
-    prisma.deliveryRoute.findMany({ where: { routeDate: { gte: todayStart, lt: tomorrowStart } }, include: { stops: true } }),
+    prisma.deliveryRoute.findMany({ where: { routeDate: { gte: todayStart, lt: tomorrowStart } } }),
     prisma.deliveryRoute.count({ where: { status: "IN_PROGRESS" } }),
   ]);
 
@@ -61,20 +61,29 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="eyebrow">{isDirector ? "Кабинет генерального директора" : "Администрирование"}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Операционный центр</h1>
-          <p className="mt-2 text-zinc-500">Быстрый контроль состояния компании.</p>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="surface-card p-5">
+          <span className="text-sm text-zinc-500">Продажи сегодня</span>
+          <strong className="mt-2 block text-3xl text-emerald-700">{formatCurrency(todaySales)}</strong>
+          <p className="mt-1 text-xs text-zinc-400">Заказов: {todayOrders.length}</p>
         </div>
-        <Link href="/field" className="button-secondary">Рабочий кабинет / карта</Link>
-      </div>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="surface-card p-5"><span className="text-sm text-zinc-500">Продажи сегодня</span><strong className="mt-2 block text-3xl text-emerald-700">{formatCurrency(todaySales)}</strong><p className="mt-1 text-xs text-zinc-400">Заказов: {todayOrders.length}</p></div>
-        <div className="surface-card p-5"><span className="text-sm text-zinc-500">Заказы сегодня</span><strong className="mt-2 block text-3xl">{todayOrders.length}</strong><p className="mt-1 text-xs text-zinc-400">Всего в работе: {monthOrders.length}</p></div>
-        <div className="surface-card p-5"><span className="text-sm text-zinc-500">Маршрутов сегодня</span><strong className="mt-2 block text-3xl">{activeRoutes.length}</strong><p className="mt-1 text-xs text-zinc-400">В работе: {inProgressRoutes}</p></div>
-        <div className="surface-card p-5"><span className="text-sm text-zinc-500">Долги магазинов</span><strong className={`mt-2 block text-3xl ${totalDebt > 0 ? "text-rose-700" : "text-emerald-700"}`}>{formatCurrency(totalDebt)}</strong><p className="mt-1 text-xs text-zinc-400">Должников: {stores.filter((s) => s.debt > 0).length}</p></div>
+        <div className="surface-card p-5">
+          <span className="text-sm text-zinc-500">Заказы сегодня</span>
+          <strong className="mt-2 block text-3xl">{todayOrders.length}</strong>
+          <p className="mt-1 text-xs text-zinc-400">Всего в работе: {monthOrders.length}</p>
+        </div>
+        <div className="surface-card p-5">
+          <span className="text-sm text-zinc-500">Маршрутов сегодня</span>
+          <strong className="mt-2 block text-3xl">{activeRoutes.length}</strong>
+          <p className="mt-1 text-xs text-zinc-400">В работе: {inProgressRoutes}</p>
+        </div>
+        <div className="surface-card p-5">
+          <span className="text-sm text-zinc-500">Долги магазинов</span>
+          <strong className={`mt-2 block text-3xl ${totalDebt > 0 ? "text-rose-700" : "text-emerald-700"}`}>
+            {formatCurrency(totalDebt)}
+          </strong>
+          <p className="mt-1 text-xs text-zinc-400">Должников: {stores.filter((s) => s.debt > 0).length}</p>
+        </div>
       </div>
 
       {isDirector && (
