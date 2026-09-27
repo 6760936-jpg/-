@@ -37,13 +37,10 @@ export default async function StoresPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="p-4 sm:p-6 lg:p-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="eyebrow">Клиентская база</p>
-          <h1 className="mt-2 text-3xl font-semibold">Магазины</h1>
-          <p className="mt-2 text-zinc-500">Адреса, геолокация, линии, задолженность и внутренние примечания.</p>
-        </div>
-        <Link href="/field" className="button-secondary">Открыть общую карту</Link>
+      <div>
+        <p className="eyebrow">Клиентская база</p>
+        <h1 className="mt-2 text-3xl font-semibold">Магазины</h1>
+        <p className="mt-2 text-zinc-500">Адреса, геолокация, линии, задолженность и внутренние примечания.</p>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">

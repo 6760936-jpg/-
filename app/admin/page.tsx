@@ -20,7 +20,6 @@ export default async function AdminDashboardPage() {
     stores,
     shelvesCount,
     complaints,
-    recentOrders,
     todayOrders,
     monthOrders,
     monthFinance,
@@ -32,11 +31,6 @@ export default async function AdminDashboardPage() {
     prisma.store.findMany({ orderBy: { debt: "desc" } }),
     prisma.shelf.count({ where: { status: "INSTALLED" } }),
     prisma.complaint.count({ where: { status: { not: "RESOLVED" } } }),
-    prisma.order.findMany({
-      include: { user: true, store: true },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    }),
     prisma.order.findMany({
       where: { createdAt: { gte: todayStart, lt: tomorrowStart }, status: { not: "CANCELLED" } },
     }),
@@ -61,7 +55,6 @@ export default async function AdminDashboardPage() {
   }
   const expenseByCategory = Array.from(expenseMap.entries()).sort((a, b) => b[1] - a[1]);
   const debtors = stores.filter((s) => s.debt > 0).slice(0, 6);
-
   const lowStock = products.filter((p) => p.active && p.stock <= 5).sort((a, b) => a.stock - b.stock).slice(0, 6);
 
   const isDirector = user.role === "DIRECTOR";
@@ -150,32 +143,6 @@ export default async function AdminDashboardPage() {
         <div className="surface-card p-4"><span className="text-sm text-zinc-500">Порча за месяц</span><strong className="mt-2 block text-2xl">{formatCurrency(spoilage._sum.amount ?? 0)}</strong></div>
         <div className="surface-card p-4"><span className="text-sm text-zinc-500">Нерешённые жалобы</span><strong className="mt-2 block text-2xl">{complaints}</strong></div>
       </div>
-
-      <section className="surface-card mt-8 overflow-hidden">
-        <div className="flex items-center justify-between border-b border-zinc-200 p-5">
-          <div>
-            <h2 className="font-semibold">Последние заказы</h2>
-            <p className="mt-1 text-sm text-zinc-500">Новые и текущие поставки</p>
-          </div>
-          <Link className="text-sm font-semibold text-violet-700" href="/admin/orders">Все заказы →</Link>
-        </div>
-        <div className="divide-y divide-zinc-100">
-          {recentOrders.map((order) => (
-            <div key={order.id} className="grid gap-2 p-5 sm:grid-cols-[80px_1fr_auto] sm:items-center">
-              <span className="text-sm font-semibold">№{order.id}</span>
-              <div>
-                <strong className="block text-sm">{order.store?.name ?? order.user.shopName}</strong>
-                <span className="text-xs text-zinc-500">{order.user.name} · {new Intl.DateTimeFormat("ru-RU").format(order.createdAt)}</span>
-              </div>
-              <div className="text-left sm:text-right">
-                <strong className="block text-sm">{formatCurrency(order.total)}</strong>
-                <span className="text-xs text-zinc-500">{order.status}</span>
-              </div>
-            </div>
-          ))}
-          {recentOrders.length === 0 && <p className="p-8 text-center text-zinc-500">Заказов пока нет.</p>}
-        </div>
-      </section>
     </div>
   );
 }

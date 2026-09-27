@@ -823,3 +823,53 @@ export async function moveStoreInLineAction(form: FormData) {
   revalidatePath("/admin/routes");
   revalidatePath("/field");
 }
+export async function assignStoreAction(form: FormData) {
+  await requireAdmin();
+  const storeId = Math.trunc(number(form, "storeId"));
+  const lineIdRaw = text(form, "lineId", 20);
+  const lineId = lineIdRaw ? Math.trunc(Number(lineIdRaw)) : null;
+  const routeIdRaw = text(form, "routeId", 20);
+  const routeId = routeIdRaw ? Math.trunc(Number(routeIdRaw)) : null;
+  const settlement = text(form, "settlement", 150) || null;
+  if (!storeId) throw new Error("Магазин не найден");
+
+  const last = lineId
+    ? await prisma.store.findFirst({
+        where: { routeLineId: lineId, id: { not: storeId } },
+        orderBy: [{ routeOrder: "desc" }, { id: "desc" }],
+        select: { routeOrder: true },
+      })
+    : null;
+
+  await prisma.store.update({
+    where: { id: storeId },
+    data: {
+      routeLineId: lineId,
+      routeOrder: lineId ? (last?.routeOrder ?? 0) + 1 : 0,
+      settlement,
+    },
+  });
+
+  if (routeId) {
+    const existing = await prisma.routeStop.findFirst({
+      where: { routeId, storeId },
+    });
+    if (!existing) {
+      const lastStop = await prisma.routeStop.findFirst({
+        where: { routeId },
+        orderBy: { sequence: "desc" },
+      });
+      await prisma.routeStop.create({
+        data: {
+          routeId,
+          storeId,
+          sequence: (lastStop?.sequence ?? 0) + 1,
+        },
+      });
+    }
+  }
+
+  revalidatePath("/admin/routes");
+  revalidatePath("/admin/stores");
+  revalidatePath("/field");
+}
