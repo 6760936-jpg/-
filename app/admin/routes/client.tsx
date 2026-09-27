@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { assignStoreAction } from "@/lib/admin-actions";
+import { assignStoreAction, changeRouteDriverAction } from "@/lib/admin-actions";
 
 declare global {
   interface Window {
@@ -38,6 +38,7 @@ type Route = {
   driverId: number | null;
   driverName: string | null;
   stopsCount: number;
+  storeIds: number[];
 };
 
 function loadLeaflet(): Promise<void> {
@@ -83,12 +84,27 @@ export function RoutesClient({
   const mapRef = useRef<any>(null);
   const layerRef = useRef<any>(null);
   const [lineFilter, setLineFilter] = useState<string>("all");
+  const [routeFilter, setRouteFilter] = useState<string>("all");
+  const [driverFilter, setDriverFilter] = useState<string>("all");
   const [mapReady, setMapReady] = useState(false);
 
   const visible = useMemo(() => {
-    if (lineFilter === "all") return points;
-    return points.filter((p) => String(p.lineId) === lineFilter);
-  }, [points, lineFilter]);
+    return points.filter((p) => {
+      if (lineFilter !== "all" && String(p.lineId) !== lineFilter) return false;
+      if (routeFilter !== "all") {
+        const route = routes.find((r) => String(r.id) === routeFilter);
+        if (!route) return false;
+        if (!route.storeIds.includes(p.id)) return false;
+      }
+      if (driverFilter !== "all") {
+        const driverRoutes = routes.filter((r) => String(r.driverId) === driverFilter);
+        const allowed = new Set<number>();
+        for (const r of driverRoutes) for (const id of r.storeIds) allowed.add(id);
+        if (!allowed.has(p.id)) return false;
+      }
+      return true;
+    });
+  }, [points, lineFilter, routeFilter, driverFilter, routes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -213,22 +229,38 @@ export function RoutesClient({
       form.set("settlement", settlementInp?.value ?? "");
 
       await assignStoreAction(form);
-      window.location.reload();
+      window.location.href = "/admin/routes";
     };
     return () => {
       delete (window as any).__assignLine;
     };
   }, []);
 
+  const filteredRoutes = useMemo(() => {
+    if (lineFilter === "all") return routes;
+    return routes.filter((r) => String(r.lineId) === lineFilter);
+  }, [routes, lineFilter]);
+
+  const filteredDrivers = useMemo(() => {
+    if (routeFilter === "all") return drivers;
+    const route = routes.find((r) => String(r.id) === routeFilter);
+    if (!route || !route.driverId) return drivers;
+    return drivers.filter((d) => d.id === route.driverId);
+  }, [drivers, routes, routeFilter]);
+
   return (
     <div className="space-y-6">
       <div className="surface-card flex flex-wrap items-end gap-3 p-4">
-        <label className="min-w-56 flex-1">
+        <label className="min-w-44 flex-1">
           <span className="field-label">Линия</span>
           <select
             className="input"
             value={lineFilter}
-            onChange={(e) => setLineFilter(e.target.value)}
+            onChange={(e) => {
+              setLineFilter(e.target.value);
+              setRouteFilter("all");
+              setDriverFilter("all");
+            }}
           >
             <option value="all">Все линии</option>
             {lines.map((l) => (
@@ -238,11 +270,48 @@ export function RoutesClient({
             ))}
           </select>
         </label>
+
+        <label className="min-w-44 flex-1">
+          <span className="field-label">Маршрут</span>
+          <select
+            className="input"
+            value={routeFilter}
+            onChange={(e) => setRouteFilter(e.target.value)}
+          >
+            <option value="all">Все маршруты</option>
+            {filteredRoutes.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.date} · {r.title}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="min-w-44 flex-1">
+          <span className="field-label">Водитель</span>
+          <select
+            className="input"
+            value={driverFilter}
+            onChange={(e) => setDriverFilter(e.target.value)}
+          >
+            <option value="all">Все водители</option>
+            {filteredDrivers.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <span className="admin-chip mb-2">На карте: {visible.length}</span>
+
         <Link href="/admin/routes/new-line" className="button-secondary">
           + Линия
         </Link>
-        <Link href="/admin/routes/new-route" className="button-primary">
+        <Link
+          href="/admin/routes/new-route"
+          className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+        >
           + Маршрут
         </Link>
       </div>
@@ -260,10 +329,14 @@ export function RoutesClient({
             {lines.map((l) => {
               const count = points.filter((p) => p.lineId === l.id).length;
               return (
-                <div key={l.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <Link
+                  key={l.id}
+                  href={`/admin/routes/${l.id}/line`}
+                  className="flex items-center justify-between gap-3 py-2 text-sm hover:text-violet-700"
+                >
                   <span className="truncate font-medium">{l.title}</span>
-                  <span className="shrink-0 text-zinc-500">{count} магазинов</span>
-                </div>
+                  <span className="shrink-0 text-zinc-500">{count} магазинов →</span>
+                </Link>
               );
             })}
             {lines.length === 0 && (
@@ -274,16 +347,42 @@ export function RoutesClient({
 
         <section className="surface-card p-5">
           <h2 className="mb-3 font-semibold">Маршруты ({routes.length})</h2>
-          <div className="divide-y divide-zinc-100">
+          <div>
             {routes.map((r) => (
-              <div key={r.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span className="min-w-0 truncate">
+              <div
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 py-3 text-sm last:border-b-0"
+              >
+                <Link
+                  href={`/admin/routes/${r.id}/route`}
+                  className="min-w-0 flex-1 hover:text-violet-700"
+                >
                   <strong className="block">{r.title}</strong>
                   <span className="text-xs text-zinc-500">
-                    {r.date} · {r.lineTitle ?? "без линии"} · {r.driverName ?? "без водителя"}
+                    {r.date} · {r.lineTitle ?? "без линии"} · {r.stopsCount} точек →
                   </span>
-                </span>
-                <span className="shrink-0 text-zinc-500">{r.stopsCount} точек</span>
+                </Link>
+                <form
+                  action={changeRouteDriverAction}
+                  className="flex shrink-0 items-center gap-2"
+                >
+                  <input type="hidden" name="routeId" value={r.id} />
+                  <select
+                    className="input w-44"
+                    name="driverId"
+                    defaultValue={r.driverId ?? ""}
+                  >
+                    <option value="">Без водителя</option>
+                    {drivers.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700">
+                    Сохранить
+                  </button>
+                </form>
               </div>
             ))}
             {routes.length === 0 && (

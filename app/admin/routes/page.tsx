@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { RoutesClient } from "./client";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Линии и маршруты" };
+export const metadata = { title: "Р›РёРЅРёРё Рё РјР°СЂС€СЂСѓС‚С‹" };
 
 export default async function RoutesPage() {
   await requireAdmin();
@@ -58,18 +58,11 @@ export default async function RoutesPage() {
     driverId: r.assignedUserId,
     driverName: r.assignedUser?.name ?? null,
     stopsCount: r.stops.length,
+    storeIds: r.stops.map((s) => s.storeId),
   }));
 
   return (
     <div className="p-4 sm:p-6 lg:p-10">
-      <div className="mb-6">
-        <p className="eyebrow">Логистика</p>
-        <h1 className="mt-2 text-3xl font-semibold">Линии и маршруты</h1>
-        <p className="mt-2 text-zinc-500">
-          Кликните магазин на карте — назначьте линию. Списки ниже.
-        </p>
-      </div>
-
       <RoutesClient
         points={points}
         lines={lineOptions}
