@@ -151,21 +151,34 @@ export function RoutesClient({
         )
         .join("");
 
+      const routeOptionsHtml = routes
+        .map((r) => `<option value="${r.id}">${escapeHtml(r.date)} · ${escapeHtml(r.title)}</option>`)
+        .join("");
+
       marker.bindPopup(
-        `<div style="min-width:240px">
+        `<div style="min-width:260px">
           <strong>${escapeHtml(p.name)}</strong>
           <div style="margin-top:4px">${escapeHtml(p.settlement ? p.settlement + ", " : "")}${escapeHtml(p.address)}</div>
           ${p.phone ? `<div style="margin-top:4px"><b>Тел:</b> <a href="tel:${escapeHtml(p.phone)}">${escapeHtml(p.phone)}</a></div>` : ""}
           <div style="margin-top:6px"><b>Долг:</b> ${escapeHtml(debtText)}</div>
           ${p.lineTitle ? `<div><b>Линия:</b> ${escapeHtml(p.lineTitle)}</div>` : '<div style="color:#b45309"><b>Без линии</b></div>'}
-          <div style="margin-top:8px"><b>Назначить линию:</b></div>
-          <div style="margin-top:4px">
-            <select id="line-sel-${p.id}" style="width:100%;padding:4px;border:1px solid #ccc;border-radius:6px">
-              <option value="">— Без линии —</option>
-              ${lineOptionsHtml}
-            </select>
-          </div>
-          <div style="margin-top:8px;display:flex;gap:6px">
+
+          <div style="margin-top:10px"><b>Линия:</b></div>
+          <select id="line-sel-${p.id}" style="width:100%;padding:4px;border:1px solid #ccc;border-radius:6px;margin-top:2px">
+            <option value="">— Без линии —</option>
+            ${lineOptionsHtml}
+          </select>
+
+          <div style="margin-top:8px"><b>Добавить в маршрут:</b></div>
+          <select id="route-sel-${p.id}" style="width:100%;padding:4px;border:1px solid #ccc;border-radius:6px;margin-top:2px">
+            <option value="">— Не добавлять —</option>
+            ${routeOptionsHtml}
+          </select>
+
+          <div style="margin-top:8px"><b>Населённый пункт:</b></div>
+          <input id="settlement-inp-${p.id}" type="text" value="${escapeHtml(p.settlement ?? "")}" placeholder="Например, Индерей" style="width:100%;padding:4px;border:1px solid #ccc;border-radius:6px;margin-top:2px" />
+
+          <div style="margin-top:10px;display:flex;gap:6px">
             <button type="button" onclick="window.__assignLine(${p.id})" style="flex:1;background:#7c3aed;color:white;padding:6px 10px;border:none;border-radius:6px;font-weight:600;cursor:pointer">Сохранить</button>
             <a href="/admin/stores/${p.id}" target="_blank" style="flex:1;text-align:center;background:#f4f4f5;color:#111;padding:6px 10px;border-radius:6px;font-weight:600;text-decoration:none">Карточка</a>
           </div>
@@ -185,16 +198,20 @@ export function RoutesClient({
       }
       map.invalidateSize();
     }, 100);
-  }, [visible, lines, mapReady]);
+  }, [visible, lines, routes, mapReady]);
 
   useEffect(() => {
     (window as any).__assignLine = async (storeId: number) => {
-      const sel = document.getElementById(`line-sel-${storeId}`) as HTMLSelectElement | null;
-      if (!sel) return;
-      const lineId = sel.value;
+      const lineSel = document.getElementById(`line-sel-${storeId}`) as HTMLSelectElement | null;
+      const routeSel = document.getElementById(`route-sel-${storeId}`) as HTMLSelectElement | null;
+      const settlementInp = document.getElementById(`settlement-inp-${storeId}`) as HTMLInputElement | null;
+
       const form = new FormData();
       form.set("storeId", String(storeId));
-      form.set("lineId", lineId);
+      form.set("lineId", lineSel?.value ?? "");
+      form.set("routeId", routeSel?.value ?? "");
+      form.set("settlement", settlementInp?.value ?? "");
+
       await assignStoreAction(form);
       window.location.reload();
     };
