@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { RoutesClient } from "./client";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Р›РёРЅРёРё Рё РјР°СЂС€СЂСѓС‚С‹" };
+export const metadata = { title: "Линии и маршруты" };
 
 export default async function RoutesPage() {
   await requireAdmin();
