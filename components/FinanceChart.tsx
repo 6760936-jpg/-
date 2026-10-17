@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Area,
   AreaChart,
@@ -17,13 +18,66 @@ type ChartData = {
 };
 
 export function FinanceChart({ data }: { data: ChartData[] }) {
+  const [period, setPeriod] = useState<"7" | "30" | "month">("7");
+  const [showShelves, setShowShelves] = useState(false);
+  const [showStores, setShowStores] = useState(false);
+
+  // В зависимости от выбранного периода, берем нужное количество дней
+  let visibleData = data;
+  if (period === "7") visibleData = data.slice(-7);
+  else if (period === "30") visibleData = data.slice(-30);
+  else if (period === "month") {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    visibleData = data.filter(d => new Date(d.date) >= monthStart);
+  }
+
   return (
     <div className="surface-card p-6">
-      <h2 className="font-semibold text-lg mb-6">Выручка за последние 7 дней</h2>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h2 className="font-semibold text-lg">Выручка</h2>
+        
+        <div className="flex flex-wrap gap-4 items-center">
+          {/* Периоды */}
+          <div className="flex bg-zinc-100 rounded-lg p-1">
+            <button
+              onClick={() => setPeriod("7")}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition ${period === "7" ? "bg-white shadow-sm text-zinc-900" : "text-zinc-500 hover:text-zinc-900"}`}
+            >
+              7 дней
+            </button>
+            <button
+              onClick={() => setPeriod("30")}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition ${period === "30" ? "bg-white shadow-sm text-zinc-900" : "text-zinc-500 hover:text-zinc-900"}`}
+            >
+              30 дней
+            </button>
+            <button
+              onClick={() => setPeriod("month")}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition ${period === "month" ? "bg-white shadow-sm text-zinc-900" : "text-zinc-500 hover:text-zinc-900"}`}
+            >
+              Этот месяц
+            </button>
+          </div>
+
+          {/* Галочки */}
+          <div className="flex items-center gap-4 text-sm">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={showShelves} onChange={e => setShowShelves(e.target.checked)} className="rounded border-zinc-300" />
+              Полки
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={showStores} onChange={e => setShowStores(e.target.checked)} className="rounded border-zinc-300" />
+              Магазины
+            </label>
+          </div>
+        </div>
+      </div>
+
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={data}
+            data={visibleData}
             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
           >
             <defs>
@@ -53,35 +107,15 @@ export function FinanceChart({ data }: { data: ChartData[] }) {
             />
             <Area
               type="monotone"
-              name="Текущая неделя"
+              name="Выручка"
               dataKey="current"
               stroke="#7c3aed"
               strokeWidth={3}
               fillOpacity={1}
               fill="url(#colorCurrent)"
             />
-            <Area
-              type="monotone"
-              name="Прошлая неделя"
-              dataKey="previous"
-              stroke="#a1a1aa"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              fill="none"
-            />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
-      
-      <div className="flex gap-6 mt-4 justify-center text-sm">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-violet-600"></span>
-          <span className="text-zinc-600">Текущая неделя</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-zinc-400"></span>
-          <span className="text-zinc-600">Прошлая неделя</span>
-        </div>
       </div>
     </div>
   );
