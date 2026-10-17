@@ -38,7 +38,10 @@ export function AdminSidebar({ name, role }: { name: string; role: string }) {
       ? [
           {
             title: "Финансы",
-            items: [{ href: "/admin/finance", label: "Финансы" }],
+            items: [
+              { href: "/admin/finance", label: "Финансы" },
+              { href: "/admin/reports", label: "Отчёты" },
+            ],
           } as Group,
         ]
       : []),
