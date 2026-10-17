@@ -28,8 +28,7 @@ export function AdminSidebar({ name, role }: { name: string; role: string }) {
     {
       title: "Товары",
       items: [
-        { href: "/admin/warehouse", label: "Склад" },
-        { href: "/admin/products", label: "Каталог" },
+        { href: "/admin/products", label: "Товары (Склад)" },
         { href: "/admin/promotions", label: "Акции" },
         { href: "/admin/spoilage", label: "Порча" },
       ],
