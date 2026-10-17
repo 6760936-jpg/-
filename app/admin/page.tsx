@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
 import { requireAdmin } from "@/lib/auth";
+import { FinanceChart } from "@/components/FinanceChart";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Операционный центр" };
@@ -14,6 +15,44 @@ export default async function AdminDashboardPage() {
   const tomorrowStart = new Date(todayStart);
   tomorrowStart.setDate(tomorrowStart.getDate() + 1);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Данные для графика (14 дней)
+  const chartStart = new Date(todayStart);
+  chartStart.setDate(chartStart.getDate() - 13);
+  const chartOrders = await prisma.order.findMany({
+    where: { createdAt: { gte: chartStart, lt: tomorrowStart }, status: { not: "CANCELLED" } },
+    select: { createdAt: true, total: true },
+  });
+
+  // Группируем по дням
+  const dailyMap = new Map<string, number>();
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(todayStart);
+    d.setDate(d.getDate() - i);
+    dailyMap.set(d.toISOString().slice(0, 10), 0);
+  }
+  for (const order of chartOrders) {
+    const key = order.createdAt.toISOString().slice(0, 10);
+    if (dailyMap.has(key)) {
+      dailyMap.set(key, (dailyMap.get(key) || 0) + order.total);
+    }
+  }
+
+  // Формируем данные для графика
+  const chartData = [];
+  const days = Array.from(dailyMap.keys()).sort();
+  for (let i = 0; i < 7; i++) {
+    const currentKey = days[i + 7];
+    const previousKey = days[i];
+    const dateObj = new Date(currentKey);
+    const dateLabel = new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short" }).format(dateObj);
+    
+    chartData.push({
+      date: dateLabel,
+      current: dailyMap.get(currentKey) || 0,
+      previous: dailyMap.get(previousKey) || 0,
+    });
+  }
 
   const [
     products,
@@ -61,6 +100,12 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-10">
+      {isDirector && (
+        <div className="mb-6">
+          <FinanceChart data={chartData} />
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="surface-card p-5">
           <span className="text-sm text-zinc-500">Продажи сегодня</span>
