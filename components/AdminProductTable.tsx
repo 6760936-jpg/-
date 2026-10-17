@@ -13,6 +13,11 @@ export function AdminProductTable() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  
+  // Состояние для прихода
+  const [incomeId, setIncomeId] = useState<number | null>(null);
+  const [incomeQty, setIncomeQty] = useState("");
+  const [savingIncome, setSavingIncome] = useState(false);
 
   async function loadProducts() {
     setLoading(true);
@@ -48,56 +53,163 @@ export function AdminProductTable() {
       const response = await fetch(`/api/products/${product.id}`, { method: "DELETE" });
       if (!response.ok) {
         const result = (await response.json()) as { error?: string };
-        throw new Error(result.error || "Не удалось удалить товар");
+        throw new Error(result.error || "Ошибка удаления");
       }
-      setProducts((current) => current.filter((item) => item.id !== product.id));
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Ошибка удаления");
+      setProducts((current) => current.filter((p) => p.id !== product.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка удаления");
     } finally {
       setDeletingId(null);
     }
   }
 
-  if (loading) return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-500">Загрузка товаров...</div>;
+  async function addStock(productId: number) {
+    const qty = Number(incomeQty);
+    if (!qty || qty < 1) return;
+    
+    setSavingIncome(true);
+    setError("");
+    try {
+      const res = await fetch("/api/stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity: qty, type: "INCOME" }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error || "Ошибка прихода");
+      }
+      setIncomeId(null);
+      setIncomeQty("");
+      await loadProducts(); // Обновляем список
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка прихода");
+    } finally {
+      setSavingIncome(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="surface-card p-10 text-center text-zinc-500">Загрузка товаров…</div>;
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <input className="input max-w-lg" placeholder="Поиск по названию, артикулу или категории" value={query} onChange={(event) => setQuery(event.target.value)} />
-        <span className="text-sm font-semibold text-slate-500">Показано: {visibleProducts.length} из {products.length}</span>
+      {error && (
+        <div className="alert-error">{error}</div>
+      )}
+
+      <div className="flex gap-3">
+        <input
+          className="input max-w-sm"
+          placeholder="Поиск по названию, артикулу или категории..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
       </div>
 
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div>}
-
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="surface-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-zinc-50 border-b border-zinc-200 text-xs uppercase text-zinc-500">
               <tr>
-                <th className="px-5 py-4">Фото</th><th className="px-5 py-4">Название</th><th className="px-5 py-4">Артикул</th><th className="px-5 py-4">Категория</th><th className="px-5 py-4">Цена</th><th className="px-5 py-4">Остаток</th><th className="px-5 py-4 text-right">Действия</th>
+                <th className="px-4 py-3">Товар</th>
+                <th className="px-4 py-3">Категория</th>
+                <th className="px-4 py-3">Цена</th>
+                <th className="px-4 py-3">Остаток</th>
+                <th className="px-4 py-3 text-right">Действия</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {visibleProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-slate-50/70">
-                  <td className="px-5 py-4"><ProductImage src={product.image} alt={product.name} className="size-14 rounded-lg" /></td>
-                  <td className="px-5 py-4 font-bold text-slate-950">{product.name}</td>
-                  <td className="px-5 py-4 font-mono text-xs text-slate-500">{product.article}</td>
-                  <td className="px-5 py-4 text-slate-600">{product.category.name}</td>
-                  <td className="px-5 py-4 font-bold text-slate-950">{formatCurrency(product.price)}</td>
-                  <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${product.stock > 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{product.stock}</span></td>
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/admin/products/${product.id}/edit`} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100">Изменить</Link>
-                      <button type="button" disabled={deletingId === product.id} onClick={() => void deleteProduct(product)} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50">{deletingId === product.id ? "Удаление..." : "Удалить"}</button>
+            <tbody className="divide-y divide-zinc-100">
+              {visibleProducts.map((p) => (
+                <tr key={p.id} className="hover:bg-zinc-50">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 shrink-0 bg-zinc-100 rounded-lg overflow-hidden">
+                        <ProductImage src={p.image} alt={p.name} className="size-full object-cover" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{p.name}</p>
+                        <p className="text-xs text-zinc-500">{p.article}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-zinc-600">{p.category.name}</td>
+                  <td className="px-4 py-3 font-medium">{formatCurrency(p.price)}</td>
+                  <td className="px-4 py-3">
+                    <strong className={p.stock === 0 ? "text-rose-600" : p.stock <= 5 ? "text-amber-600" : "text-emerald-600"}>
+                      {p.stock} шт
+                    </strong>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {incomeId === p.id ? (
+                        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-zinc-200 shadow-sm">
+                          <input
+                            type="number"
+                            className="w-16 px-2 py-1 text-sm border-none outline-none"
+                            placeholder="Кол-во"
+                            autoFocus
+                            value={incomeQty}
+                            onChange={(e) => setIncomeQty(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") void addStock(p.id);
+                              if (e.key === "Escape") setIncomeId(null);
+                            }}
+                          />
+                          <button
+                            onClick={() => void addStock(p.id)}
+                            disabled={savingIncome}
+                            className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                          >
+                            ОК
+                          </button>
+                          <button
+                            onClick={() => setIncomeId(null)}
+                            className="rounded px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100"
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setIncomeId(p.id);
+                            setIncomeQty("");
+                          }}
+                          className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
+                        >
+                          + Приход
+                        </button>
+                      )}
+                      
+                      <Link
+                        href={`/admin/products/${p.id}/edit`}
+                        className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
+                      >
+                        Изменить
+                      </Link>
+                      <button
+                        onClick={() => void deleteProduct(p)}
+                        disabled={deletingId === p.id}
+                        className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                      >
+                        Удалить
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
+              {visibleProducts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-zinc-500">
+                    Товаров не найдено
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-        {visibleProducts.length === 0 && <div className="p-10 text-center text-slate-500">Товары не найдены.</div>}
       </div>
     </div>
   );
