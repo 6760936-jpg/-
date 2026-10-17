@@ -16,42 +16,46 @@ export default async function AdminDashboardPage() {
   tomorrowStart.setDate(tomorrowStart.getDate() + 1);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Данные для графика (14 дней)
+  // Данные для графика (за 60 дней)
   const chartStart = new Date(todayStart);
-  chartStart.setDate(chartStart.getDate() - 13);
-  const chartOrders = await prisma.order.findMany({
-    where: { createdAt: { gte: chartStart, lt: tomorrowStart }, status: { not: "CANCELLED" } },
-    select: { createdAt: true, total: true },
-  });
+  chartStart.setDate(chartStart.getDate() - 60);
+  
+  const [chartOrders, chartShelves, chartStores] = await Promise.all([
+    prisma.order.findMany({ where: { createdAt: { gte: chartStart, lt: tomorrowStart }, status: { not: "CANCELLED" } }, select: { createdAt: true, total: true } }),
+    prisma.shelf.findMany({ where: { installedAt: { gte: chartStart, lt: tomorrowStart } }, select: { installedAt: true } }),
+    prisma.store.findMany({ where: { createdAt: { gte: chartStart, lt: tomorrowStart } }, select: { createdAt: true } })
+  ]);
 
-  // Группируем по дням
-  const dailyMap = new Map<string, number>();
-  for (let i = 13; i >= 0; i--) {
+  // Группируем
+  const dailyMap = new Map<string, { current: number; shelves: number; stores: number }>();
+  for (let i = 60; i >= 0; i--) {
     const d = new Date(todayStart);
     d.setDate(d.getDate() - i);
-    dailyMap.set(d.toISOString().slice(0, 10), 0);
+    dailyMap.set(d.toISOString().slice(0, 10), { current: 0, shelves: 0, stores: 0 });
   }
+  
   for (const order of chartOrders) {
     const key = order.createdAt.toISOString().slice(0, 10);
-    if (dailyMap.has(key)) {
-      dailyMap.set(key, (dailyMap.get(key) || 0) + order.total);
+    if (dailyMap.has(key)) dailyMap.get(key)!.current += order.total;
+  }
+  for (const shelf of chartShelves) {
+    if (shelf.installedAt) {
+      const key = shelf.installedAt.toISOString().slice(0, 10);
+      if (dailyMap.has(key)) dailyMap.get(key)!.shelves += 1;
     }
   }
+  for (const store of chartStores) {
+    const key = store.createdAt.toISOString().slice(0, 10);
+    if (dailyMap.has(key)) dailyMap.get(key)!.stores += 1;
+  }
 
-  // Формируем данные для графика
   const chartData = [];
   const days = Array.from(dailyMap.keys()).sort();
-  for (let i = 0; i < 7; i++) {
-    const currentKey = days[i + 7];
-    const previousKey = days[i];
-    const dateObj = new Date(currentKey);
+  for (const day of days) {
+    const dateObj = new Date(day);
     const dateLabel = new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short" }).format(dateObj);
-    
-    chartData.push({
-      date: dateLabel,
-      current: dailyMap.get(currentKey) || 0,
-      previous: dailyMap.get(previousKey) || 0,
-    });
+    const data = dailyMap.get(day)!;
+    chartData.push({ date: dateLabel, ...data, previous: 0 });
   }
 
   const [
@@ -70,12 +74,8 @@ export default async function AdminDashboardPage() {
     prisma.store.findMany({ orderBy: { debt: "desc" } }),
     prisma.shelf.count({ where: { status: "INSTALLED" } }),
     prisma.complaint.count({ where: { status: { not: "RESOLVED" } } }),
-    prisma.order.findMany({
-      where: { createdAt: { gte: todayStart, lt: tomorrowStart }, status: { not: "CANCELLED" } },
-    }),
-    prisma.order.findMany({
-      where: { createdAt: { gte: monthStart }, status: { not: "CANCELLED" } },
-    }),
+    prisma.order.findMany({ where: { createdAt: { gte: todayStart, lt: tomorrowStart }, status: { not: "CANCELLED" } } }),
+    prisma.order.findMany({ where: { createdAt: { gte: monthStart }, status: { not: "CANCELLED" } } }),
     prisma.financeEntry.findMany({ where: { entryDate: { gte: monthStart } } }),
     prisma.spoilage.aggregate({ where: { createdAt: { gte: monthStart } }, _sum: { amount: true } }),
     prisma.deliveryRoute.findMany({ where: { routeDate: { gte: todayStart, lt: tomorrowStart } } }),
