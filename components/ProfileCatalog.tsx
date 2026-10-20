@@ -70,7 +70,7 @@ export function ProfileCatalog({
     }
   }
 
-  // Для просмотрщика — добавим категорию
+  // Р”Р»СЏ РїСЂРѕСЃРјРѕС‚СЂС‰РёРєР° вЂ” РґРѕР±Р°РІРёРј РєР°С‚РµРіРѕСЂРёСЋ
   const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
   const viewerProducts = filtered.map((p) => ({
     id: p.id,
@@ -79,6 +79,7 @@ export function ProfileCatalog({
     image: p.image,
     stock: p.stock,
     categoryName: categoryMap.get(p.categoryId) ?? "",
+    minOrder: p.minOrder,
   }));
 
   return (
@@ -93,7 +94,7 @@ export function ProfileCatalog({
               : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
           }`}
         >
-          Все
+          Р’СЃРµ
         </button>
         {categories.map((c) => (
           <button
@@ -113,7 +114,7 @@ export function ProfileCatalog({
 
       {filtered.length === 0 ? (
         <div className="surface-card border-dashed p-10 text-center">
-          <p className="text-zinc-500">В этой категории пока нет товаров.</p>
+          <p className="text-zinc-500">Р’ СЌС‚РѕР№ РєР°С‚РµРіРѕСЂРёРё РїРѕРєР° РЅРµС‚ С‚РѕРІР°СЂРѕРІ.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -131,7 +132,7 @@ export function ProfileCatalog({
                   type="button"
                   onClick={() => setViewerIndex(index)}
                   className="mb-3 flex h-32 cursor-zoom-in items-center justify-center rounded-xl bg-zinc-50 transition hover:bg-zinc-100"
-                  aria-label={`Открыть фото ${p.name}`}
+                  aria-label={`РћС‚РєСЂС‹С‚СЊ С„РѕС‚Рѕ ${p.name}`}
                 >
                   <ProductImage
                     src={p.image}
@@ -148,17 +149,17 @@ export function ProfileCatalog({
                   </strong>
                   {available ? (
                     <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      В наличии
+                      Р’ РЅР°Р»РёС‡РёРё
                     </span>
                   ) : (
                     <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-500">
-                      Нет
+                      РќРµС‚
                     </span>
                   )}
                 </div>
 
                 <div className="mt-1 text-xs text-zinc-400">
-                  {available ? `${p.stock} шт · мин. ${min}` : "Ожидается"}
+                  {available ? `${p.stock} С€С‚ В· РјРёРЅ. ${min}` : "РћР¶РёРґР°РµС‚СЃСЏ"}
                 </div>
 
                 {available ? (
@@ -168,7 +169,7 @@ export function ProfileCatalog({
                       onClick={() => changeQty(p, qty - 1)}
                       className="flex size-10 items-center justify-center rounded-l-xl text-xl font-bold text-zinc-700 hover:bg-zinc-100"
                     >
-                      −
+                      в€’
                     </button>
                     <span className="w-full text-center text-base font-semibold">
                       {qty}
@@ -188,7 +189,7 @@ export function ProfileCatalog({
                     disabled
                     className="mt-3 w-full cursor-not-allowed rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-400"
                   >
-                    Нет в наличии
+                    РќРµС‚ РІ РЅР°Р»РёС‡РёРё
                   </button>
                 )}
               </div>
