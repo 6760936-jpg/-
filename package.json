@@ -2,44 +2,36 @@
   "name": "perspektiva-b2b",
   "version": "1.0.0",
   "private": true,
-  "description": "РџР•Р РЎРџР•РљРўРР’Рђ вЂ” РѕРїС‚РѕРІР°СЏ С‚РѕСЂРіРѕРІР»СЏ, РґРѕСЃС‚Р°РІРєР°, СЃРєР»Р°Рґ Рё СѓРїСЂР°РІР»РµРЅС‡РµСЃРєР°СЏ РїР°РЅРµР»СЊ",
-  "engines": {
-    "node": ">=20.9.0"
-  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm run lint && npm run build",
-    "postinstall": "prisma generate && prisma db push",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:seed": "prisma db seed",
-    "db:studio": "prisma studio",
-    "setup": "prisma generate && prisma db push && prisma db seed"
-  },
-  "dependencies": {
-    "@prisma/client": "6.19.0",
-    "next": "16.2.11",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
-    "recharts": "^3.10.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "4.3.3",
-    "@types/node": "^22.15.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "eslint": "^9.39.0",
-    "eslint-config-next": "16.2.11",
-    "prisma": "6.19.0",
-    "tailwindcss": "4.3.3",
-    "tsx": "^4.20.0",
-    "typescript": "^5.9.2"
+    "lint": "next lint",
+    "postinstall": "prisma generate"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "@types/leaflet": "^1.9.21",
+    "bcryptjs": "^3.0.3",
+    "leaflet": "^1.9.4",
+    "next": "16.2.11",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^3.3.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.11",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^4.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
   }
 }
