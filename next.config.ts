@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    turbo: {
+      // Это заставит Vercel пересобрать всё с нуля
+    },
+  },
 };
 
 export default nextConfig;
