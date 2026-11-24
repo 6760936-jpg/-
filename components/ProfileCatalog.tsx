@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
@@ -70,7 +70,7 @@ export function ProfileCatalog({
     }
   }
 
-  // Р”Р»СЏ РїСЂРѕСЃРјРѕС‚СЂС‰РёРєР° вЂ” РґРѕР±Р°РІРёРј РєР°С‚РµРіРѕСЂРёСЋ
+  // Для просмотрщика — добавим категорию
   const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
   const viewerProducts = filtered.map((p) => ({
     id: p.id,
@@ -94,7 +94,7 @@ export function ProfileCatalog({
               : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
           }`}
         >
-          Р’СЃРµ
+          Все
         </button>
         {categories.map((c) => (
           <button
@@ -114,7 +114,7 @@ export function ProfileCatalog({
 
       {filtered.length === 0 ? (
         <div className="surface-card border-dashed p-10 text-center">
-          <p className="text-zinc-500">Р’ СЌС‚РѕР№ РєР°С‚РµРіРѕСЂРёРё РїРѕРєР° РЅРµС‚ С‚РѕРІР°СЂРѕРІ.</p>
+          <p className="text-zinc-500">В этой категории пока нет товаров.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -132,7 +132,7 @@ export function ProfileCatalog({
                   type="button"
                   onClick={() => setViewerIndex(index)}
                   className="mb-3 flex h-32 cursor-zoom-in items-center justify-center rounded-xl bg-zinc-50 transition hover:bg-zinc-100"
-                  aria-label={`РћС‚РєСЂС‹С‚СЊ С„РѕС‚Рѕ ${p.name}`}
+                  aria-label={`Открыть фото ${p.name}`}
                 >
                   <ProductImage
                     src={p.image}
@@ -149,17 +149,17 @@ export function ProfileCatalog({
                   </strong>
                   {available ? (
                     <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      Р’ РЅР°Р»РёС‡РёРё
+                      В наличии
                     </span>
                   ) : (
                     <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-500">
-                      РќРµС‚
+                      Нет
                     </span>
                   )}
                 </div>
 
                 <div className="mt-1 text-xs text-zinc-400">
-                  {available ? `${p.stock} С€С‚ В· РјРёРЅ. ${min}` : "РћР¶РёРґР°РµС‚СЃСЏ"}
+                  {available ? `${p.stock} шт · мин. ${min}` : "Ожидается"}
                 </div>
 
                 {available ? (
@@ -169,7 +169,7 @@ export function ProfileCatalog({
                       onClick={() => changeQty(p, qty - 1)}
                       className="flex size-10 items-center justify-center rounded-l-xl text-xl font-bold text-zinc-700 hover:bg-zinc-100"
                     >
-                      в€’
+                      −
                     </button>
                     <span className="w-full text-center text-base font-semibold">
                       {qty}
@@ -189,7 +189,7 @@ export function ProfileCatalog({
                     disabled
                     className="mt-3 w-full cursor-not-allowed rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-400"
                   >
-                    РќРµС‚ РІ РЅР°Р»РёС‡РёРё
+                    Нет в наличии
                   </button>
                 )}
               </div>

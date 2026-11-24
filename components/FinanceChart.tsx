@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import {
@@ -40,29 +40,29 @@ export function FinanceChart({ data }: { data: ChartData[] }) {
   return (
     <div className="surface-card p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <h2 className="font-semibold text-lg">Р’С‹СЂСѓС‡РєР°</h2>
+        <h2 className="font-semibold text-lg">Выручка</h2>
         
         <div className="flex flex-wrap items-end gap-4">
           <label className="flex flex-col gap-1 text-sm text-zinc-600">
-            <span>РЎ</span>
+            <span>С</span>
             <input type="date" className="input py-1.5" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </label>
           <label className="flex flex-col gap-1 text-sm text-zinc-600">
-            <span>РџРѕ</span>
+            <span>По</span>
             <input type="date" className="input py-1.5" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </label>
           <button onClick={() => { setStartDate(""); setEndDate(""); }} className="px-3 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900">
-            РЎР±СЂРѕСЃРёС‚СЊ
+            Сбросить
           </button>
           
           <div className="flex items-center gap-4 text-sm ml-4 border-l border-zinc-200 pl-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={showShelves} onChange={e => setShowShelves(e.target.checked)} className="rounded border-zinc-300" />
-              РџРѕР»РєРё
+              Полки
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={showStores} onChange={e => setShowStores(e.target.checked)} className="rounded border-zinc-300" />
-              РњР°РіР°Р·РёРЅС‹
+              Магазины
             </label>
           </div>
         </div>
@@ -85,16 +85,16 @@ export function FinanceChart({ data }: { data: ChartData[] }) {
               labelStyle={{ color: "#71717a", marginBottom: "4px" }}
               contentStyle={{ borderRadius: "12px", border: "1px solid #e4e4e7", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
             />
-            <Area type="monotone" name="Р’С‹СЂСѓС‡РєР°" dataKey="current" stroke="#7c3aed" strokeWidth={3} fillOpacity={1} fill="url(#colorCurrent)" />
+            <Area type="monotone" name="Выручка" dataKey="current" stroke="#7c3aed" strokeWidth={3} fillOpacity={1} fill="url(#colorCurrent)" />
             
-            {/* РџРѕР»РєРё */}
+            {/* Полки */}
             {showShelves && (
-              <Line type="monotone" name="РџРѕР»РєРё" dataKey="shelves" stroke="#10b981" strokeWidth={2} dot={false} />
+              <Line type="monotone" name="Полки" dataKey="shelves" stroke="#10b981" strokeWidth={2} dot={false} />
             )}
             
-            {/* РњР°РіР°Р·РёРЅС‹ */}
+            {/* Магазины */}
             {showStores && (
-              <Line type="monotone" name="РњР°РіР°Р·РёРЅС‹" dataKey="stores" stroke="#f59e0b" strokeWidth={2} dot={false} />
+              <Line type="monotone" name="Магазины" dataKey="stores" stroke="#f59e0b" strokeWidth={2} dot={false} />
             )}
           </AreaChart>
         </ResponsiveContainer>
