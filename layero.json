@@ -1,0 +1,3 @@
+﻿{
+  "installCommand": "apt-get update && apt-get install -y openssl && npm install"
+}
