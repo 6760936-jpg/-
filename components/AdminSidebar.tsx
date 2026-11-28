@@ -12,7 +12,7 @@ export function AdminSidebar({ name, role }: { name: string; role: string }) {
   const pathname = usePathname();
   const isDirector = role === "DIRECTOR";
 
-  const groups: Group[] = [
+    const groups: Group[] = [
     { title: "", items: [{ href: "/admin", label: "Обзор" }] },
     {
       title: "Продажи",
@@ -29,6 +29,7 @@ export function AdminSidebar({ name, role }: { name: string; role: string }) {
       title: "Товары",
       items: [
         { href: "/admin/products", label: "Товары (Склад)" },
+        { href: "/admin/transfers", label: "🚚 Передача водителям" },
         { href: "/admin/promotions", label: "Акции" },
         { href: "/admin/spoilage", label: "Порча" },
       ],
